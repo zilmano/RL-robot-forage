@@ -52,8 +52,8 @@ def testRandomPolicy(gridWorldModel):
 def testDynaQ(gridWorldModel):
     # Run two episodes with a DynaQ policy
     Q = np.zeros((gridWorldModel._env_spec.nS,gridWorldModel._env_spec.nA))
-    pi = tabular_dyna_q(gridWorldModel, Q, 0.1, 1000, 50)
-    """i = 0
+    q, pi = tabular_dyna_q(gridWorldModel, Q, 0.1, 1000, 50)
+    i = 0
 
     visualizeGrid(gridWorldModel)
     while i < 2:
@@ -62,7 +62,7 @@ def testDynaQ(gridWorldModel):
         if final:
             gridWorldModel.reset()
             visualizeGrid(gridWorldModel)
-            i += 1"""
+            i += 1
 
 def visualizeGrid(gridWorldModel):
    util.visualizeGridTxt(gridWorldModel,gridWorldModel.V)
