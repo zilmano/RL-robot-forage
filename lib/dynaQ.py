@@ -15,6 +15,7 @@ class EpsilonGreedyPolicy(Policy):
 
     def action(self,state):
         if random.random() < .1:
+            print("random")
             return random.randrange(0,self.nA)
         else:
             return np.random.choice(len(self.p[state]), p=self.p[state])
@@ -42,7 +43,6 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n):
     gamma = grid_world._env_spec.gamma
     model = np.zeros((num_states,num_actions, 2))
     previously_visited = []
-    grid_world.reset()
     pi = update_policy(q, num_states, num_actions)
 
     for i in range(num_steps):
@@ -60,7 +60,6 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n):
             pr = model[ps][pa][0]
             psp = int(model[ps][pa][1])
             q[ps][pa] = q[ps][pa] + alpha * (pr + (gamma * np.amax(q[psp])) - q[ps][pa])
-
         pi = update_policy(q, num_states, num_actions)
 
         if final:
