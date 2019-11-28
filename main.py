@@ -1,7 +1,9 @@
 import sys
 sys.path.append("./lib")
+import numpy as np
 import utility as util
 import policy
+from TileCoding import TileCodingGridWorldWItems
 from GridWorldEnv import GridWorld, Item, Actions
 
 def test1(gridWorldEnv):
@@ -62,7 +64,11 @@ if __name__ == "__main__":
 
     # Testing
     testRandomPolicy(gridWorldModel)
-    #test1(gridWorldModel)
 
+    # Example initialization of TileCoding
+    num_tilings = 6
+    tile_width = np.array([0.0,0.0]) # Initialize tile width to zero, the tile width will be automatically calculated by
+                                 # TileCoding class with respect to the num of tilings.
+    tc = TileCodingGridWorldWItems(np.array([0,0]),np.array([m,n]),num_tilings,tile_width,k,calc_tile_width=True)
 
 
