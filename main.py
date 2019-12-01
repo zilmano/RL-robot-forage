@@ -5,6 +5,7 @@ import utility as util
 import policy
 from TileCoding import TileCodingGridWorldWItems
 from GridWorldEnv import GridWorld, Item, Actions
+from dynaQ import tabular_dyna_q
 
 def test1(gridWorldEnv):
     # Oleg: testing the model with some sequence of steps.
@@ -49,6 +50,24 @@ def testRandomPolicy(gridWorldModel):
             visualizeGrid(gridWorldModel)
             i += 1
 
+def testDynaQ(gridWorldModel):
+    # Run two episodes with a DynaQ policy
+    Q = np.zeros((gridWorldModel._env_spec.nS,gridWorldModel._env_spec.nA))
+    training_steps = 5000
+    model_training_steps = 50
+    learning_rate = 0.1
+    q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps)
+    i = 0
+
+    visualizeGrid(gridWorldModel)
+    while i < 2:
+        a = pi.action(gridWorldModel.state)
+        (s,r,final) = gridWorldModel.step(a)
+        if final:
+            gridWorldModel.reset()
+            visualizeGrid(gridWorldModel)
+            i += 1
+
 def visualizeGrid(gridWorldModel):
    util.visualizeGridTxt(gridWorldModel,gridWorldModel.V)
 
@@ -63,7 +82,9 @@ if __name__ == "__main__":
     gridWorldModel = GridWorld(m,n,k,debug=True)
 
     # Testing
-    testRandomPolicy(gridWorldModel)
+    #testRandomPolicy(gridWorldModel)
+    testDynaQ(gridWorldModel)
+    #test1(gridWorldModel)
 
     # Example initialization of TileCoding
     num_tilings = 6
