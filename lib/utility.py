@@ -1,31 +1,85 @@
 import sys
 import numpy as np
 from policy import PolicyType
-'''
- ########
- ### Module For Utility Functions
- ########
-'''
-'''class Printer:
-    def __init__(self,logfile=None):
-        if logfile is None:
-            logfile = "log.txt"
-        self._logfile = logfile
-        try:
-            self._fh = open(logfile,"w")
-        except IOError:
-            sys.exit("ERROR: Could not open log file {}. Exiting".format(logfile))
+from bisect import bisect_left, bisect_right
+import collections
 
-    def __del__(self):
-        self._fh.close()
+########
+### Module For Utility Functions
+########
 
-    def logmsg(self,msg):
-        print(msg)
-        self._fh.write(msg + "\n")
+class PriorityQ:
+    def __init__(self):
+        self.sortedList = list()
 
-    def error(self,msg):
-        sys.exit("ERROR: {}".format(msg))
-'''
+    def add(self, intNum):
+        bisect.insort(self.sortedList, intNum)
+
+    def pop(self):
+        if (not self.isEmpty()):
+            return self.sortedList.pop()
+        else:
+            return -101
+
+    def isEmpty(self):
+        if len(self.sortedList) > 0:
+            return False
+        else:
+            return True
+
+class BasicQueue:
+    def __init__(self):
+        self.qlist = list()
+
+    def add(self, item):
+        self.qlist.append(item)
+
+    def pop(self):
+        if (not self.isEmpty()):
+            return self.qlist.pop()
+        else:
+            raise IndexError("Queue is empty, cannot pop.")
+
+    def isEmpty(self):
+        if len(self.qList) > 0:
+            return False
+        else:
+            return True
+
+class SortedList(list):
+    def __init__(self, data=[]):
+        super().__init__(sorted(data))
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError
+
+    def __contains__(self, value):
+        index= bisect_left(self, value)
+        if index == len(self) or self[index] != value:
+            return False
+        else:
+            return True
+
+    def append(self,value):
+        raise NotImplementedError
+
+    def add(self, value):
+        """Add an item to this list."""
+        index = bisect_right(self, value)
+        self.insert(index, value)
+
+    def index(self, value, start=0, stop=None):
+        """Return first index of value.
+        Raise ValueError if not found."""
+        if stop is None:
+            stop = len(self)
+        index = bisect_left(self, value, start, stop)
+        if index != len(self) and self[index] == value:
+            return index
+        else:
+            return None
+
+
 
 log_fh = None
 def openlog(logfile=None):
@@ -38,14 +92,19 @@ def openlog(logfile=None):
         sys.exit("ERROR: Could not open log file {}. Quitting. Err message: {}".format(logfile,e))
 
 
-def logmsg(msg):
-    msg = str(msg)
+def logmsg(msg,vars=None,tab=0):
+    if vars is not None:
+        msg = tab * "    " + msg.format(*vars)
     print(msg)
     global log_fh
     try:
         log_fh.write(msg + "\n")
     except AttributeError as e:
-        sys.exit("Could not write to the log file. Err message: {}".format(e))
+        openlog("log.txt")
+        try:
+            log_fh.write(msg + "\n")
+        except AttributeError as e:
+            sys.exit("Could not write to the log file. Err message: {}".format(e))
 
 def error(msg):
     global log_fh
