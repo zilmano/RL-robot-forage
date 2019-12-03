@@ -142,7 +142,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         return (state % self. m), int(state / self.m)
 
     def _getStateFromColRow(self, col, row):
-        return col*self.m + row
+        return int(col*self.m + row)
 
     def _build_trans_mat(self):
         trans_mat = np.zeros((self.spec.nS, len(Actions), self.spec.nS))
@@ -205,10 +205,13 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         self.items_to_go -= len(self.item_locations[row][col])
         self.item_locations[row][col] = []
 
-    def reset(self, random_state=False):
-        if not random_state:
-            self._state = 0
-        else:
+    def reset(self, start_state=None, random_state=False):
+        # Random_state wins start_state. Don't use together.
+        self._state = 0
+        if start_state is not None:
+            assert start_state < self.spec.nS, "start state provided to reset function is out of bounds."
+            self._state = start_state
+        if random_state:
             self._state = np.random.randint(low=0, high=self.spec.nS, size=1)[0]
 
         self.items_to_go = self.k
@@ -221,7 +224,6 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             util.logmsg("## Generated Items: ")
             for item in self.items:
                 util.printobj(item)
-
 
         (row, col) = self._getRowColFromState(self._state)
         if len(self.item_locations[row][col]) > 0:
@@ -298,6 +300,10 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         return self._state
 
     @property
+    def final(self):
+        return self._final_state
+
+    @property
     def V(self):
         return self._V
 
@@ -312,5 +318,9 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     @property
     def R(self) -> np.array:
         return self.r_mat
+
+    @property
+    def graph(self) -> GridGraphWithItems:
+        return self.graph_rep
 
 
