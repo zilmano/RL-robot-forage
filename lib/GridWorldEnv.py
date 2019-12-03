@@ -36,23 +36,29 @@ class Item:
 
 
 class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
-    def __init__(self, m, n, k, debug=False):
-        # 20x20 grid world
-        STATE_SPACE_SIZE = m*n
-        self.m = m
-        self.n = n
-        assert self.n*self.m == STATE_SPACE_SIZE, "nS does not match n and m. m*n should give nS"
-        # Number of items to search
-        self.k = k
+    def __init__(self, m, n, k, gamma=1, debug=False, no_stochastisity=False):
+        # (m x n) grid world
+        self.grid_size = m*n
+
+        # Total state size is grid size multiplied by all combinations of items found status.
+        # For example grid cell zero would be a different state when none items are found, and when item ony 1 is
+        # found.
+        STATE_SPACE_SIZE = m*n*pow(2,k)
+        self.m = m  # rows
+        self.n = n  # columns
+        self.k = k  # Number of items to search
         self.items = list()
         self.debug = debug
         self._final_state = False
         self._state = None
+        self._grid_cell = None
         self.trans_mat = None
         self.r_mat = None
         self.item_loc_probabilities = None
         self.items_to_go = None
+        self.items_status = np.zeros(k)
         self.already_visited = None
+        self.no_stochastisity = no_stochastisity
         # nS states of mxn grid. State numbering is by columns starting from top-left. i.e:
         # top-row, leftmost-col state = 0, bottom-leftmost state = m-1, top-row,second from left col = m
         # 2nd from top row, 2nd from left column = m+1.  etc...
@@ -60,9 +66,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         # Actions:
         # 0 -west, 1 -north, 2-east, 3 -south
 
-        # Gamma:
-        GAMMA = 0.90
-        env_spec = EnvSpec(STATE_SPACE_SIZE, len(Actions), GAMMA)
+        env_spec = EnvSpec(STATE_SPACE_SIZE, len(Actions), gamma)
         super().__init__(env_spec)
 
         self._V = np.zeros(self.spec.nS)
@@ -73,7 +77,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         #for i in range(0, k):
         #    print(self.item_loc_probabilities[i])
         #    print(self.item_loc_probabilities[i].sum())
-        #sys.exit()
+
         self.graph_rep = GridGraphWithItems(m, n, k, self.item_loc_probabilities)
         self.reset()
         '''for i in range(0,self.spec.nS):
@@ -81,13 +85,13 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
 
     def _generateItems(self):
         for i in range(0, self.k):
-            mean = np.random.randint(low=0, high=self.spec.nS, size=1)[0]
+            mean = np.random.randint(low=0, high=self.grid_size, size=1)[0]
             variance = np.random.randint(low=2, high=5, size=1)[0]
             self.items.append(Item(mean, variance, string.ascii_lowercase[i], self.m, self.n))
 
     def _initItemsProbabilities(self):
         # Calc items probabilities to be in states
-        self.item_loc_probabilities = np.zeros([self.k, self.spec.nS])
+        self.item_loc_probabilities = np.zeros([self.k, self.grid_size])
         for i, item in enumerate(self.items):
             mv_gaussian = stats.multivariate_normal(mean=[item.mean_x, item.mean_y], cov=[[item.variance, 0],
                                                                                       [0, item.variance]])
@@ -110,8 +114,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             For example, the probability of the item being in cell 2 is the probability of item's x being -inf<x<=1,
             and y being 1<y<=2            
             '''
-
-            for bottom_cell in range(self.m - 1, self.spec.nS, self.m):
+            for bottom_cell in range(self.m - 1, self.grid_size, self.m):
                 sum_of_prev_col_cell_probs = 0
                 for row in reversed(range(0, self.m)):
                     state = bottom_cell - (self.m - 1) + row
@@ -131,7 +134,10 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     def _placeItems(self):
         self.item_locations = [[[] for i in range(0, self.n)] for j in range(0, self.m)]
         for item in self.items:
-            ((x, y),) = np.random.multivariate_normal([item.mean_x, item.mean_y], [[item.variance, 0], [0,
+            if (self.no_stochastisity):
+                (x,y) = self._getRowColFromState(item.mean)
+            else:
+                ((x, y),) = np.random.multivariate_normal([item.mean_x, item.mean_y], [[item.variance, 0], [0,
                                                                                                    item.variance]], 1)
             x = self.m - 1 if x > self.m - 1 else (0 if x < 0 else x)
             y = self.n - 1 if y > self.n - 1 else (0 if y < 0 else y)
@@ -145,11 +151,11 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         return int(col*self.m + row)
 
     def _build_trans_mat(self):
-        trans_mat = np.zeros((self.spec.nS, len(Actions), self.spec.nS))
-        r_mat = np.zeros((self.spec.nS, len(Actions), self.spec.nS))
+        trans_mat = np.zeros((self.grid_size, len(Actions), self.grid_size))
+        r_mat = np.zeros((self.grid_size, len(Actions), self.grid_size))
 
         # Build transition matrix
-        for state in range(0, self.spec.nS):
+        for state in range(0, self.grid_size):
 
             if state < self.m:
                 trans_mat[state][Actions.west][state] = 1
@@ -158,7 +164,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 trans_mat[state][Actions.west][state - self.m] = 1
                 r_mat[state][Actions.west][state - self.m] = -1
 
-            if state in range(0, self.spec.nS, self.m):
+            if state in range(0, self.grid_size, self.m):
                 trans_mat[state][Actions.north][state] = 1
                 r_mat[state][Actions.north][state] = -10
             else:
@@ -172,7 +178,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 trans_mat[state][Actions.east][state + self.m] = 1
                 r_mat[state][Actions.east][state + self.m] = -1
 
-            if state in range(self.m-1, self.spec.nS, self.m):
+            if state in range(self.m-1, self.grid_size, self.m):
                 trans_mat[state][Actions.south][state] = 1
                 r_mat[state][Actions.south][state] = -10.
             else:
@@ -184,35 +190,40 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 r_mat[item.state+self.m][Actions.west][item.state] += 20
             if item.state >= self.m:
                 r_mat[item.state-self.m][Actions.east][item.state] += 20
-            if item.state not in range(0, self.spec.nS, self.m):
+            if item.state not in range(0, self.grid_size, self.m):
                 r_mat[item.state - 1][Actions.south][item.state] += 20
-            if item.state not in range(self.m - 1, self.spec.nS, self.m):
+            if item.state not in range(self.m - 1, self.grid_size, self.m):
                 r_mat[item.state+1][Actions.north][item.state] += 20
 
         return trans_mat, r_mat
 
     def _update_trans_mat(self):
-        if self._state < (self.n - 1) * self.m:
-            self.r_mat[self._state + self.m][Actions.west][self._state] = -5
-        if self._state >= self.m:
-            self.r_mat[self._state - self.m][Actions.east][self._state] = -5
-        if self._state not in range(0, self.spec.nS, self.m):
-            self.r_mat[self._state - 1][Actions.south][self._state] = -5
-        if self._state not in range(self.m - 1, self.spec.nS, self.m):
-            self.r_mat[self._state + 1][Actions.north][self._state] = -5
+        #reward_after_visit = -5
+        reward_after_visit = -1
+        if self._grid_cell < (self.n - 1) * self.m:
+            self.r_mat[self._grid_cell + self.m][Actions.west][self._grid_cell] = reward_after_visit
+        if self._grid_cell >= self.m:
+            self.r_mat[self._grid_cell - self.m][Actions.east][self._grid_cell] = reward_after_visit
+        if self._grid_cell not in range(0, self.grid_size, self.m):
+            self.r_mat[self._grid_cell - 1][Actions.south][self._grid_cell] = reward_after_visit
+        if self._grid_cell not in range(self.m - 1, self.grid_size, self.m):
+            self.r_mat[self._grid_cell + 1][Actions.north][self._grid_cell] = reward_after_visit
 
     def _items_found(self, row, col):
         self.items_to_go -= len(self.item_locations[row][col])
+        for item_in_loc in self.item_locations[row][col]:
+            item_indx = ord(item_in_loc.name) - 97
+            self.items_status[item_indx] = 1
         self.item_locations[row][col] = []
 
-    def reset(self, start_state=None, random_state=False):
+    def reset(self, start_cell=None, random_start_cell=False):
         # Random_state wins start_state. Don't use together.
-        self._state = 0
-        if start_state is not None:
-            assert start_state < self.spec.nS, "start state provided to reset function is out of bounds."
-            self._state = start_state
-        if random_state:
-            self._state = np.random.randint(low=0, high=self.spec.nS, size=1)[0]
+        self._grid_cell = 0
+        if start_cell is not None:
+            assert start_cell < self.grid_size, "start state provided to reset function is out of bounds."
+            self._grid_cell = start_cell
+        if random_start_cell:
+            self._grid_cell = np.random.randint(low=0, high=self.grid_size, size=1)[0]
 
         self.items_to_go = self.k
         self._placeItems()
@@ -225,16 +236,20 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             for item in self.items:
                 util.printobj(item)
 
-        (row, col) = self._getRowColFromState(self._state)
+        (row, col) = self._getRowColFromState(self._grid_cell)
         if len(self.item_locations[row][col]) > 0:
             self._items_found(row, col)
 
         self.trans_mat, self.r_mat = self._build_trans_mat()
         self._update_trans_mat()
 
-        self.already_visited = self.spec.nS * [0]
-        self.already_visited[self._state] = 1
+        self.already_visited = self.grid_size * [0]
+        self.already_visited[self._grid_cell] = 1
 
+        # covert items_status to a number between 0 to (2^k-1)
+        items_status_state = sum(self.items_status * np.power(np.ones(self.k) * 2, np.arange(0, self.k)))
+        # calculate state from curr grid cell and the item found/not-found statuses.
+        self._state = int(self._grid_cell + items_status_state*self.grid_size)
         if self.items_to_go == 0:
             self._final_state = True
         else:
@@ -246,29 +261,34 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             util.logmsg("reset complete.")
             util.logmsg("")
 
-        return self._state
+        return self._state, self._final_state
 
     def step(self, action):
         assert Actions.west <= action < self.spec.nA, "Invalid Action!"
         assert 0 <= self._state < self.spec.nS, "Invalid State!"
         assert not self._final_state, "Episode has already finished. Please restart!"
 
-        prev_state = self._state
-        self._state = np.random.choice(self.spec.nS, p=self.trans_mat[self._state, action])
-        r = self.r_mat[prev_state, action, self._state]
+        prev_grid_cell = self._grid_cell
+
+        self._grid_cell = np.random.choice(self.grid_size, p=self.trans_mat[self._grid_cell, action])
+        r = self.r_mat[prev_grid_cell, action, self._grid_cell]
 
         if self.debug:
             util.logmsg("taking step with a:{}...".format(action))
-            util.logmsg("s:{} r:{}".format(self._state, r))
+            util.logmsg("s:{} r:{}".format(self._grid_cell, r))
 
-        (row, col) = self._getRowColFromState(self._state)
+        (row, col) = self._getRowColFromState(self._grid_cell)
         if len(self.item_locations[row][col]) > 0:
             if self.debug:
                 util.logmsg("items found!")
             self._items_found(row, col)
 
         self._update_trans_mat()
-        self.already_visited[self._state] = 1
+        self.already_visited[self._grid_cell] = 1
+
+        items_status_state = sum(self.items_status * np.power(np.ones(self.k) * 2, np.arange(0, self.k)))
+        self._state = int(self._grid_cell + items_status_state * self.grid_size)
+
         if self.items_to_go == 0:
             self._final_state = True
             return self._state, r, True
@@ -310,6 +330,12 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     @property
     def Q(self):
         return self._Q
+
+    def setQ(self, Q , pi):
+        self._Q = Q
+        for s in range(0, self.spec.nS):
+            for a in range(0, self.spec.nA):
+                self.V[s] += pi.action_prob(s, a) * Q[s][a]
 
     @property
     def TD(self) -> np.array:
