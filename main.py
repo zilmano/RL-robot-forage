@@ -59,6 +59,8 @@ def testDynaQ(gridWorldModel):
     q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,one_episode=False)
     gridWorldModel.setQ(q,pi)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
+    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
+    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
     visualizeGridValueFunc(gridWorldModel)
     print(q)
 
@@ -101,5 +103,3 @@ if __name__ == "__main__":
     tile_width = np.array([0.0,0.0]) # Initialize tile width to zero, the tile width will be automatically calculated by
                                  # TileCoding class with respect to the num of tilings.
     tc = TileCodingGridWorldWItems(np.array([0,0]),np.array([m,n]),num_tilings,tile_width,k,calc_tile_width=True)
-
-

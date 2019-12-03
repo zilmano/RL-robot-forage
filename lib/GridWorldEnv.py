@@ -43,7 +43,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         # Total state size is grid size multiplied by all combinations of items found status.
         # For example grid cell zero would be a different state when none items are found, and when item ony 1 is
         # found.
-        STATE_SPACE_SIZE = m*n*pow(2,k)
+        STATE_SPACE_SIZE = m*n*(pow(2,k)-1)+1
         self.m = m  # rows
         self.n = n  # columns
         self.k = k  # Number of items to search
@@ -56,7 +56,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         self.r_mat = None
         self.item_loc_probabilities = None
         self.items_to_go = None
-        self.items_status = np.zeros(k)
+        self.items_status = None
         self.already_visited = None
         self.no_stochastisity = no_stochastisity
         # nS states of mxn grid. State numbering is by columns starting from top-left. i.e:
@@ -95,9 +95,9 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         for i, item in enumerate(self.items):
             mv_gaussian = stats.multivariate_normal(mean=[item.mean_x, item.mean_y], cov=[[item.variance, 0],
                                                                                       [0, item.variance]])
-            '''' 
+            ''''
             grid coding as follows (example 4x4), state num is inside each grid cell:
-            Y  
+            Y
             4 _________________
             3 _0_|_4_|_8__|_12_|
             2 _1_|_5_|_9__|_13_|
@@ -105,14 +105,14 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             0 _3_|_7_|_11_|_15_|
                  1   2    3    4  X
 
-            cells on the edge of the grid have bigger probabilities then the cells in the middle, as they get all 
-            probabilities of the space beyond them. 
-            For instance, the probability of the item x being from -inf to 1 will be crammed into cells rightmost col 
-            (states 0,1,2,3). The probability of the item being from 3 to inf will be crammed into cell on the leftmost 
-            col (states 12,13,14,15). 
+            cells on the edge of the grid have bigger probabilities then the cells in the middle, as they get all
+            probabilities of the space beyond them.
+            For instance, the probability of the item x being from -inf to 1 will be crammed into cells rightmost col
+            (states 0,1,2,3). The probability of the item being from 3 to inf will be crammed into cell on the leftmost
+            col (states 12,13,14,15).
             etc..
             For example, the probability of the item being in cell 2 is the probability of item's x being -inf<x<=1,
-            and y being 1<y<=2            
+            and y being 1<y<=2
             '''
             for bottom_cell in range(self.m - 1, self.grid_size, self.m):
                 sum_of_prev_col_cell_probs = 0
@@ -187,13 +187,13 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
 
         for item in self.items:
             if item.state < (self.n-1) * self.m:
-                r_mat[item.state+self.m][Actions.west][item.state] += 20
+                r_mat[item.state+self.m][Actions.west][item.state] += 1
             if item.state >= self.m:
-                r_mat[item.state-self.m][Actions.east][item.state] += 20
+                r_mat[item.state-self.m][Actions.east][item.state] += 1
             if item.state not in range(0, self.grid_size, self.m):
-                r_mat[item.state - 1][Actions.south][item.state] += 20
+                r_mat[item.state - 1][Actions.south][item.state] += 1
             if item.state not in range(self.m - 1, self.grid_size, self.m):
-                r_mat[item.state+1][Actions.north][item.state] += 20
+                r_mat[item.state+1][Actions.north][item.state] += 1
 
         return trans_mat, r_mat
 
@@ -226,6 +226,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             self._grid_cell = np.random.randint(low=0, high=self.grid_size, size=1)[0]
 
         self.items_to_go = self.k
+        self.items_status = np.zeros(self.k)
         self._placeItems()
         if self.debug:
             util.logmsg("")
@@ -249,7 +250,11 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         # covert items_status to a number between 0 to (2^k-1)
         items_status_state = sum(self.items_status * np.power(np.ones(self.k) * 2, np.arange(0, self.k)))
         # calculate state from curr grid cell and the item found/not-found statuses.
-        self._state = int(self._grid_cell + items_status_state*self.grid_size)
+        if items_status_state == pow(2,self.k)-1:
+            self._state = self.spec.nS-1
+        else:
+            self._state = int(self._grid_cell + items_status_state*self.grid_size)
+
         if self.items_to_go == 0:
             self._final_state = True
         else:
@@ -287,7 +292,10 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         self.already_visited[self._grid_cell] = 1
 
         items_status_state = sum(self.items_status * np.power(np.ones(self.k) * 2, np.arange(0, self.k)))
-        self._state = int(self._grid_cell + items_status_state * self.grid_size)
+        if items_status_state == pow(2,self.k)-1:
+            self._state = self.spec.nS-1
+        else:
+            self._state = int(self._grid_cell + items_status_state * self.grid_size)
 
         if self.items_to_go == 0:
             self._final_state = True
@@ -348,5 +356,3 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     @property
     def graph(self) -> GridGraphWithItems:
         return self.graph_rep
-
-

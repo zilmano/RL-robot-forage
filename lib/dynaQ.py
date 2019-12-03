@@ -64,6 +64,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, one_episode=False):
         previously_visited.append((S, A))
         (SP, R, final) = grid_world.step(A)
 
+        #print(S)
+        #print(SP)
         q[S][A] = q[S][A] + alpha * (R + (gamma * np.amax(q[SP])) - q[S][A])
         model[S][A][0] = R
         model[S][A][1] = SP
@@ -76,7 +78,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, one_episode=False):
         pi = update_policy(q, num_states, num_actions)
 
         while final:
-            (_, final) = grid_world.reset()
+            (test, final) = grid_world.reset(random_start_cell=True)
+            #print(test)
             #util.visualizeGridTxt(grid_world, grid_world.V)
             if one_episode:
                 return q, pi
