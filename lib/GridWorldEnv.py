@@ -86,8 +86,8 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     def _generateItems(self):
         for i in range(0, self.k):
             mean = np.random.randint(low=0, high=self.grid_size, size=1)[0]
-            variance = np.random.randint(low=2, high=5, size=1)[0]
-            self.items.append(Item(mean, variance, string.ascii_lowercase[i], self.m, self.n))
+            variance = np.random.randint(low=1, high=2, size=1)[0]
+            self.items.append(Item(mean, variance-.5, string.ascii_lowercase[i], self.m, self.n))
 
     def _initItemsProbabilities(self):
         # Calc items probabilities to be in states
