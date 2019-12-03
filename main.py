@@ -41,35 +41,43 @@ def testRandomPolicy(gridWorldModel):
     pi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
     i = 0
 
-    visualizeGrid(gridWorldModel)
+    visualizeGridValueFunc(gridWorldModel)
     while i < 2:
         a = pi.action(gridWorldModel.state)
         (s,r,final) = gridWorldModel.step(a)
         if final:
             gridWorldModel.reset()
-            visualizeGrid(gridWorldModel)
+            visualizeGridValueFunc(gridWorldModel)
             i += 1
 
 def testDynaQ(gridWorldModel):
     # Run two episodes with a DynaQ policy
-    Q = np.zeros((gridWorldModel._env_spec.nS,gridWorldModel._env_spec.nA))
-    training_steps = 5000
+    Q = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
+    training_steps = 10000
     model_training_steps = 50
     learning_rate = 0.1
-    q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps)
-    i = 0
+    q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,one_episode=False)
+    gridWorldModel.setQ(q,pi)
+    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
+    visualizeGridValueFunc(gridWorldModel)
+    print(q)
 
-    visualizeGrid(gridWorldModel)
-    while i < 2:
-        a = pi.action(gridWorldModel.state)
-        (s,r,final) = gridWorldModel.step(a)
-        if final:
-            gridWorldModel.reset()
-            visualizeGrid(gridWorldModel)
-            i += 1
 
-def visualizeGrid(gridWorldModel):
-   util.visualizeGridTxt(gridWorldModel,gridWorldModel.V)
+def visualizeGridPolicy(pi, m, n, item_status=0):
+    util.visualizePolicyTxt(pi, m, n, item_status)
+
+
+def visualizeGridValueFunc(gridWorldModel):
+    util.visualizeGridTxt(gridWorldModel,gridWorldModel.V)
+
+
+def visualizeGridProbabilities(gridWorldModel, k, aggregate=False):
+
+    if not aggregate:
+        for i in range(0, k):
+            util.visualizeGridTxt(gridWorldModel, gridWorldModel.item_loc_probabilities[i])
+    else:
+        util.visualizeGridTxt(gridWorldModel,np.sum(gridWorldModel.item_loc_probabilities,axis=0))
 
 
 if __name__ == "__main__":
@@ -79,10 +87,12 @@ if __name__ == "__main__":
     n = 4
     m = 4
     k = 2
-    gridWorldModel = GridWorld(m,n,k,debug=True)
+    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=True)
+    visualizeGridValueFunc(gridWorldModel)
+    visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
 
     # Testing
-    #testRandomPolicy(gridWorldModel)
+   # testRandomPolicy(gridWorldModel)
     testDynaQ(gridWorldModel)
     #test1(gridWorldModel)
 
