@@ -101,17 +101,25 @@ class HandMadeSweepPolicy(Policy):
         return p
 
     def action_prob(self,state:int,action:int):
+        if state >= self.nS:
+            state = state % self.nS
         return self._p[state][action]
 
     def action(self,state):
+        if state >= self.nS:
+            state = state % self.nS
         return np.random.choice(self._nA, p=self._p[state])
 
     def set_greedy_action(self,state,new_greedy_actions):
+        if state >= self.nS:
+            state = state % self.nS
         self._p[state] = np.zeros(self._nA)
         for action in new_greedy_actions:
            self._p[state][action] = 1/len(new_greedy_actions)
 
     def set_e_soft_action(self, state, new_action, e):
+        if state >= self.nS:
+            state = state % self.nS
         self._p[state] = np.array(self._nA*[e/self.nA])
         self._p[state][new_action] = 1 - e + e/self.nA
 
