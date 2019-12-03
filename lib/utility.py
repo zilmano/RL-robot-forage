@@ -1,12 +1,20 @@
+from enum import IntEnum
 import sys
 import numpy as np
 from policy import PolicyType
 from bisect import bisect_left, bisect_right
+import math
 import collections
 
 ########
 ### Module For Utility Functions
 ########
+
+class Actions(IntEnum):
+    west = 0
+    north = 1
+    east = 2
+    south = 3
 
 class PriorityQ:
     def __init__(self):
@@ -123,15 +131,15 @@ def printobj(obj):
 
     logmsg("")
 
-def visualizeGridTxt(env,V):
+def visualizeGridTxt(env,V,items_status=0):
         upper_border = " " + env.n * "_______"
         print(upper_border)
         for i in range(0, env.m):
             upper_border += '_'
             middle_row = ''
             bottom_border = ""
-            for j in range(i, env.spec.nS, env.m):
-                strV = "{: ^6.2f}".format(V[j])
+            for j in range(i, env.grid_size, env.m):
+                strV = "{: ^6.2f}".format(V[j+items_status*env.grid_size])
                 middle_row += "|{}".format(strV)
                 row = int(j % env.m)
                 col = int(j/env.m)
@@ -144,19 +152,18 @@ def visualizeGridTxt(env,V):
             print(middle_row)
             print(bottom_border)
 
-def visualizePolicyTxt(pi:np.array,m,n, policy_type=PolicyType.greedy, eps = 0):
-    assert m*n == pi.nS, "grid column and row are in discrepancy with array size!"
+def visualizePolicyTxt(pi:np.array,m,n, item_status = 0 ,policy_type=PolicyType.greedy, eps = 0):
 
     upper_border = " " + ((n-1) * "____________") + "__________"
     print(upper_border)
     treshold = 0
     for i in range(0,m):
-        #print("row#{} ------------------------------------".format(i))
         tile_row = 5 * ['']
-        for j in range(i,25,5):
-            num_optimal_actions = sum(math.ceil(prob) for prob in pi.P[j])
+        for j in range(i,n*m,m):
+            state = j+item_status*m*n
+            num_optimal_actions = sum(math.ceil(prob) for prob in pi.P[state])
             if (policy_type == PolicyType.greedy):
-                for prob in pi.P[j]:
+                for prob in pi.P[state]:
                     assert prob == (1/num_optimal_actions) or prob == 0, "Policy that is given is not greedy," \
                                                                                       "can not visualize"
                 treshold = 0
@@ -166,7 +173,7 @@ def visualizePolicyTxt(pi:np.array,m,n, policy_type=PolicyType.greedy, eps = 0):
 
             #print("state {}".format(j))
             #print("    optAction#{} {} ".format(num_optimal_actions, pi.P[j]))
-            if (pi.P[j][Actions.north] > treshold):
+            if (pi.P[state][Actions.north] > treshold):
                 tile_row[0] += '|     ^     '
                 tile_row[1] += '|     |     '
             else:
@@ -174,16 +181,16 @@ def visualizePolicyTxt(pi:np.array,m,n, policy_type=PolicyType.greedy, eps = 0):
                 tile_row[1] += '|           '
 
             tile_row[2] += '| '
-            if (pi.P[j][Actions.west] > treshold):
+            if (pi.P[state][Actions.west] > treshold):
                 tile_row[2] += '<- - '
             else:
                 tile_row[2] += '     '
-            if (pi.P[j][Actions.east] > treshold):
+            if (pi.P[state][Actions.east] > treshold):
                 tile_row[2] += '- -> '
             else:
                 tile_row[2] += '     '
 
-            if (pi.P[j][Actions.south] > treshold):
+            if (pi.P[state][Actions.south] > treshold):
                 tile_row[3] += '|     |     '
                 tile_row[4] += '|_____v_____'
             else:
