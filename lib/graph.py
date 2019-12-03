@@ -12,7 +12,7 @@ class GridGraphWithItems:
         self.adj_mat = np.zeros([self.amount_vertices,self.amount_vertices])
 
         for item in range(0,items_num):
-            assert items_prob_matrix[item].sum() == 1, "Prob matrix for item {} is wrong. Probabilites for item " \
+            assert math.isclose(items_prob_matrix[item].sum(),1), "Prob matrix for item {} is wrong. Probabilites for item " \
                                                        "should some to 1"
         self.items_prob_mat = items_prob_matrix
         self.items_num = items_num
@@ -56,8 +56,9 @@ class GridGraphWithItems:
         return bool(self.adj_mat[src, dest])
 
     def get_approximate_best_path(self,start_vertex):
-        path = [[start_vertix, 0]]
+        path = [[start_vertex, 0]]
         nn, steps = self.get_nearest_neighbor_aggregate_prob(start_vertex)
+        path.append((nn, steps))
         while nn is not None:
             nn, steps = self.get_nearest_neighbor_aggregate_prob(nn)
             path.append((nn, steps))
@@ -66,6 +67,7 @@ class GridGraphWithItems:
         return (path, path_exp_cost)
 
     def get_nearest_neighbor_aggregate_prob(self,vertex):
+        assert vertex is not None, "Need to specify start vertex for the nearest neighbor algorithm"
         vertices = [vertex]
         self.items_prob_mat[0] += 1
         self.not_visited_vertices[vertex] = 0
@@ -77,7 +79,7 @@ class GridGraphWithItems:
         weighted_neighbors = np.zeros(self.amount_vertices)
         neighbor_vec = np.zeros(self.amount_vertices)
         if len(vertices) == 0 or np.all(self.not_visited_vertices == 0):
-            return (None,None)
+            return (None, None)
         steps += 1
         for vertex in vertices:
             neighbor_vec =  np.logical_or(neighbor_vec, self.adj_mat[vertex])
