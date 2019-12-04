@@ -216,12 +216,10 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             self.items_status[item_indx] = 1
         self.item_locations[row][col] = []
 
-    def reset(self, start_cell=None, random_start_cell=False):
+    def reset(self, start_cell=0, random_start_cell=False):
         # Random_state wins start_state. Don't use together.
-        self._grid_cell = 0
-        if start_cell is not None:
-            assert start_cell < self.grid_size, "start state provided to reset function is out of bounds."
-            self._grid_cell = start_cell
+        assert start_cell < self.grid_size, "start state provided to reset function is out of bounds."
+        self._grid_cell = start_cell
         if random_start_cell:
             self._grid_cell = np.random.randint(low=0, high=self.grid_size, size=1)[0]
 
@@ -259,7 +257,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             util.logmsg("")
             util.logmsg("")
             util.logmsg("reset complete.")
-            util.logmsg("")
+            util.logmsg("grid_cell {}",(self._grid_cell,))
 
         return self._state, self._final_state
 
