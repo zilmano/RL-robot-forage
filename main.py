@@ -6,6 +6,8 @@ import policy
 from TileCoding import TileCodingGridWorldWItems
 from GridWorldEnv import GridWorld, Item, Actions
 from dynaQ import tabular_dyna_q
+import MonteCarloControl as mc
+from policy import PolicyType
 
 def test1(gridWorldEnv):
     # Oleg: testing the model with some sequence of steps.
@@ -62,9 +64,27 @@ def testDynaQ(gridWorldModel):
     visualizeGridValueFunc(gridWorldModel)
     print(q)
 
+def testMonteCarlo(gw):
+    Q = np.zeros((gridWorldModel.spec.nS, gridWorldModel.spec.nA))
+    training_steps = 10000
+    model_training_steps = 50
+    learning_rate = 0.3
+    randomPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
+    # if bPi is None:
+    #    bPi = randomPi
+    # evalPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
 
-def visualizeGridPolicy(pi, m, n, item_status=0):
-    util.visualizePolicyTxt(pi, m, n, item_status)
+    sim = mc.Simulation(gw, randomPi)
+    eps = 0.2
+    training_episodes = 1000
+
+    (Q, V, pi) = mc.on_policy_mc_control(Q, eps, sim, training_episodes)
+    gw.setQ = Q
+    visualizeGridPolicy(pi, gw.m, gw.n, policy_type=PolicyType.e_soft, eps=eps)
+    visualizeGridValueFunc(gw)
+
+def visualizeGridPolicy(pi, m, n, item_status=0,policy_type=PolicyType.greedy,eps=0.1):
+    util.visualizePolicyTxt(pi, m, n, item_status,policy_type=policy_type,eps=eps)
 
 
 def visualizeGridValueFunc(gridWorldModel):
@@ -87,14 +107,15 @@ if __name__ == "__main__":
     n = 4
     m = 4
     k = 2
-    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=True)
+    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=True)
     visualizeGridValueFunc(gridWorldModel)
     visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
 
     # Testing
    # testRandomPolicy(gridWorldModel)
-    testDynaQ(gridWorldModel)
+    #testDynaQ(gridWorldModel)
     #test1(gridWorldModel)
+    testMonteCarlo(gridWorldModel)
 
     # Example initialization of TileCoding
     num_tilings = 6
