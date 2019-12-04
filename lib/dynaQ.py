@@ -58,12 +58,19 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, one_episode=False):
     if grid_world.final:
         return q, pi
 
+    last_ep_step_count = np.zeros(20)
+    avg_step_count = 0
+    step_count = 0
+    episode_count = 0
+
     for i in tqdm(range(num_steps)):
         S = grid_world.state
         A = pi.action(S)
         previously_visited.append((S, A))
         (SP, R, final) = grid_world.step(A)
 
+        #print(S)
+        #print(SP)
         q[S][A] = q[S][A] + alpha * (R + (gamma * np.amax(q[SP])) - q[S][A])
         model[S][A][0] = R
         model[S][A][1] = SP
@@ -75,10 +82,18 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, one_episode=False):
             q[ps][pa] = q[ps][pa] + alpha * (pr + (gamma * np.amax(q[psp])) - q[ps][pa])
         pi = update_policy(q, num_states, num_actions)
 
+        step_count += 1
+        avg_step_count += step_count
         while final:
-            (_, final) = grid_world.reset()
+            (test, final) = grid_world.reset(random_start_cell=True)
+            last_ep_step_count[episode_count%20] = step_count
+            step_count = 0
+            episode_count += 1
+            #print(test)
             #util.visualizeGridTxt(grid_world, grid_world.V)
             if one_episode:
                 return q, pi
 
+    avg_step_count = last_ep_step_count.sum()/20
+    print( " Dyna Finished. Epsidoes run: {} Average Steps Per Episode {} - Last Episode Steps: {}".format(episode_count,avg_step_count,last_ep_step_count))
     return q, pi

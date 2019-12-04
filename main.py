@@ -55,12 +55,14 @@ def testRandomPolicy(gridWorldModel):
 def testDynaQ(gridWorldModel):
     # Run two episodes with a DynaQ policy
     Q = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
-    training_steps = 10000
+    training_steps = 20000
     model_training_steps = 50
     learning_rate = 0.1
     q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,one_episode=False)
     gridWorldModel.setQ(q,pi)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
+    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
+    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
     visualizeGridValueFunc(gridWorldModel)
     print(q)
 
@@ -107,13 +109,13 @@ if __name__ == "__main__":
     n = 4
     m = 4
     k = 2
-    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=True)
+    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=False)
     visualizeGridValueFunc(gridWorldModel)
     visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
 
     # Testing
    # testRandomPolicy(gridWorldModel)
-    #testDynaQ(gridWorldModel)
+    testDynaQ(gridWorldModel)
     #test1(gridWorldModel)
     testMonteCarlo(gridWorldModel)
 
