@@ -35,8 +35,8 @@ def execute_policy(env, start_state, pi, num_of_episodes, max_out_steps=math.inf
     avg_steps = total_steps/num_of_episodes
     return avg_steps
 
-def visualizeGridValueFunc(gridWorldModel):
-   util.visualizeGridTxt(gridWorldModel,gridWorldModel.V)
+def visualizeGridValueFunc(gridWorldModel, items_status=0):
+   util.visualizeGridTxt(gridWorldModel, gridWorldModel.V, items_status)
 
 def visualizeGridProbabilities(gridWorldModel, k, aggregate = False):
 
@@ -47,16 +47,16 @@ def visualizeGridProbabilities(gridWorldModel, k, aggregate = False):
         util.visualizeGridTxt(gridWorldModel,np.sum(gridWorldModel.item_loc_probabilities,axis=0))
 
 
-n = 8
-m = 8
+n = 4
+m = 4
 k = 2
 #gw = GridWorld(m, n, k, debug=False)
 #visualizeGridProbabilities(gw, k)
 
-Q = np.zeros((gridWorldModel._env_spec.nS,gridWorldModel._env_spec.nA))
-dyna_model_training_steps = 50
-learning_rate = 0.1
-q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps)
+#Q = np.zeros((gridWorldModel._env_spec.nS,gridWorldModel._env_spec.nA))
+#dyna_model_training_steps = 50
+#learning_rate = 0.1
+#q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps)
 
 sweep_pi = policy.HandMadeSweepPolicy(4, m, n)
 episodes_num = 100
@@ -71,7 +71,7 @@ print("nearest_neighbor_tour:" + str(base_line_tour))
 
 for i in range(0,episodes_num):
     print("inst world model...")
-    gw.reset(start_state=m-1)
+    gw.reset(start_cell=m-1)
     visualizeGridValueFunc(gw)
     print("exec sweep policy for episode...")
     sweep_steps += exec_policy_for_episode(gw,sweep_pi)
