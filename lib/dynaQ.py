@@ -7,6 +7,7 @@ from policy import NewPolicy
 import random
 from tqdm import tqdm
 import utility as util
+from matplotlib.pyplot import *
 
 
 class Model:
@@ -152,4 +153,12 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
 
     avg_step_count = last_ep_step_count.sum()/20
     print( " Dyna Finished. Epsidoes run: {} Average Steps Per Episode {} - Last Episode Steps: {}".format(episode_count,avg_step_count,last_ep_step_count))
+
+    #Steps per episode graph
+    eps = range(len(episode_steps))
+    plot(eps, episode_steps)
+    xlabel('Episodes')
+    ylabel('Steps per Episode')
+    show()
+
     return q, pi

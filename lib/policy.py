@@ -15,7 +15,7 @@ class Policy(object):
         """
         raise NotImplementedError()
 
-    def action(self,state:int) -> int:
+    def action(self,state:int,greedy=False) -> int:
         """
         input:
             state
@@ -33,8 +33,12 @@ class NewPolicy(Policy):
     def action_prob(self,state:int,action:int):
         return self._p[state][action]
 
-    def action(self,state):
-        return np.random.choice(self._nA, p=self._p[state])
+    def action(self,state, greedy=False):
+        if not greedy:
+            return np.random.choice(self._nA, p=self._p[state])
+        else:
+            max_actions = np.argwhere(self._p[state] == self._p[state].max()).flatten()
+            return np.random.choice(max_actions)
 
     def set_greedy_action(self,state,new_greedy_actions):
         self._p[state] = np.zeros(self._nA)
@@ -64,6 +68,54 @@ class NewPolicy(Policy):
     @nS.setter
     def nS(self, nS):
         self._nS = nS
+
+class ApproximatePolicy(Policy):
+    def __init__(self,nA,nS):
+        self._nA = nA
+        self.approximators = nA*[]
+
+    def action_prob(self, features, action):
+        return self.approximators[action](*features)
+
+    def action(self,state, greedy=False):
+        for Qvalue in approximators:
+
+        if not greedy:
+            return np.random.choice(self._nA, p=self._p[state])
+        else:
+            max_actions = np.argwhere(self._p[state] == self._p[state].max()).flatten()
+            return np.random.choice(max_actions)
+
+    def set_greedy_action(self,state,new_greedy_actions):
+        self._p[state] = np.zeros(self._nA)
+        for action in new_greedy_actions:
+           self._p[state][action] = 1/len(new_greedy_actions)
+
+    def set_e_soft_action(self, state, new_action, e):
+        self._p[state] = np.array(self._nA*[e/self.nA])
+        self._p[state][new_action] = 1 - e + e/self.nA
+
+    @property
+    def P(self) -> np.array:
+        return self._p
+
+    @property
+    def nA(self) -> int:
+        return self._nA
+
+    @nA.setter
+    def nA(self,nA):
+        self._nA = nA
+
+    @property
+    def nS(self) -> int:
+        return self._nS
+
+    @nS.setter
+    def nS(self, nS):
+        self._nS = nS
+
+
 
 
 class HandMadeSweepPolicy(Policy):
@@ -105,7 +157,7 @@ class HandMadeSweepPolicy(Policy):
             state = state % self.nS
         return self._p[state][action]
 
-    def action(self,state):
+    def action(self,state,greedy=False):
         if state >= self.nS:
             state = state % self.nS
         return np.random.choice(self._nA, p=self._p[state])
