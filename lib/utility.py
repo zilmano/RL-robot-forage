@@ -87,8 +87,6 @@ class SortedList(list):
         else:
             return None
 
-
-
 log_fh = None
 def openlog(logfile=None):
     global log_fh
@@ -200,3 +198,42 @@ def visualizePolicyTxt(pi:np.array,m,n, item_status = 0 ,policy_type=PolicyType.
         for curr_row in tile_row:
             curr_row += '|'
             print(curr_row)
+
+class Simulator:
+    def __init__(self,env,pi,random_start=False)->None:
+        assert env.spec.nA == pi.nA and env.spec.nS == pi.nS, "policy and environment are not compatible. Not the " \
+                                                              "the number of the states and actions differ."
+        self._env = env
+        self._pi = pi
+        self._random_start = random_start
+
+    @property
+    def pi(self):
+        return self._pi
+
+    @property
+    def env(self):
+        return self._env
+
+    def get_trajectory(self,N_truncation = None):
+        init_state, done = self._env.reset(random_start_cell=self._random_start)
+        states, actions, rewards, done = \
+            [[init_state], [], [], done]
+        step = 0
+        while not done and (N_truncation is None or step < N_truncation):
+            a = self._pi.action(states[-1])
+            s, r, done,a = self._env.step_using_policy(self._pi)
+            states.append(s)
+            actions.append(a)
+            rewards.append(r)
+            step += 1
+        print("   traj steps:" + str(step))
+        return list(zip(states[:-1],actions,rewards,states[1:]))
+
+    def get_trajectories(self,episode_num, N_truncation = None):
+        util.logmsg("generating trajectories...")
+        trajs = []
+        for _ in tqdm(range(episode_num)):
+            trajs.append(self.get_trajectory(N_truncation))
+        return trajs
+
