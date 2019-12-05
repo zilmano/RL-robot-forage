@@ -1,6 +1,8 @@
 import sys
 sys.path.append("./lib")
 import numpy as np
+import math
+import copy
 import utility as util
 import policy
 from TileCoding import TileCodingGridWorldWItems
@@ -52,38 +54,73 @@ def testRandomPolicy(gridWorldModel):
             visualizeGridValueFunc(gridWorldModel)
             i += 1
 
+def exec_policy_for_episode(env,pi,max_out_steps=math.inf):
+    steps = 0
+    final = False
+    print("start state:{}".format(env.state))
+    final = env.final
+    while not final and steps <= max_out_steps:
+        a = pi.action(env.state,greedy=False)
+        (s, r, final) = env.step(a)
+        #print("a {} --> s {}".format(a,s))
+        steps += 1
+    return steps
+
 def testDynaQ(gridWorldModel):
     # Run two episodes with a DynaQ policy
     Q = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
-    training_steps = 20000
+    training_steps = 10000000
     model_training_steps = 50
     learning_rate = 0.1
-    q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,one_episode=False)
+    q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps, num_of_episodes=1200)
     gridWorldModel.setQ(q,pi)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
     visualizeGridValueFunc(gridWorldModel)
     print(q)
+    return pi
 
 def testMonteCarlo(gw):
     Q = np.zeros((gridWorldModel.spec.nS, gridWorldModel.spec.nA))
-    training_steps = 10000
-    model_training_steps = 50
-    learning_rate = 0.3
     randomPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
-    # if bPi is None:
-    #    bPi = randomPi
-    # evalPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
-
-    sim = mc.Simulation(gw, randomPi)
-    eps = 0.2
-    training_episodes = 1000
+    sim = util.Simulator(gw, randomPi)
+    eps = 0.01
+    training_episodes = 10000
 
     (Q, V, pi) = mc.on_policy_mc_control(Q, eps, sim, training_episodes)
     gw.setQ = Q
+
     visualizeGridPolicy(pi, gw.m, gw.n, policy_type=PolicyType.e_soft, eps=eps)
     visualizeGridValueFunc(gw)
+    return pi
+
+def compareToBaseLine(gw,eval_pi,k):
+    sweep_pi = policy.HandMadeSweepPolicy(4, m, n)
+    episodes_num = 100
+    sweep_steps = 0
+    rl_steps = 0
+
+    visualizeGridProbabilities(gw, k, aggregate=True)
+    base_line_tour, nn_tour_expected_steps = gw.graph.get_approximate_best_path(start_vertex=m - 1)
+    print("nearest_neighbor_tour:" + str(base_line_tour))
+
+    for i in range(0, episodes_num):
+        print("inst world model...")
+        gw.reset(start_cell=(m - 1))
+        gw_twin = copy.deepcopy(gw)
+        #visualizeGridValueFunc(gw)
+        print("exec sweep policy for episode...")
+        sweep_steps += exec_policy_for_episode(gw, sweep_pi)
+        rl_steps += exec_policy_for_episode(gw_twin, eval_pi)
+        print("rl steps" + str(rl_steps))
+        print("sweep steps" + str(sweep_steps))
+        # nn_tour_expected_steps += gw.graph.calc_path_cost(base_line_tour)
+    avg_nn_steps = nn_tour_expected_steps
+    avg_sweep_steps = sweep_steps / episodes_num
+    avg_rl_steps = rl_steps/episodes_num
+    print("avg_sweep={} avg_rl={} avg_nearest_neigbor={}".format(avg_sweep_steps, avg_rl_steps,avg_nn_steps))
+
 
 def visualizeGridPolicy(pi, m, n, item_status=0,policy_type=PolicyType.greedy,eps=0.1):
     util.visualizePolicyTxt(pi, m, n, item_status,policy_type=policy_type,eps=eps)
@@ -106,18 +143,19 @@ if __name__ == "__main__":
     util.openlog('log.txt')
 
     # Intitalize 4x4 gridworld with 2 items
-    n = 4
-    m = 4
+    n = 8
+    m = 8
     k = 2
-    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=False)
-    visualizeGridValueFunc(gridWorldModel)
+    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=False)
+    #visualizeGridValueFunc(gridWorldModel)
     visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
 
     # Testing
-   # testRandomPolicy(gridWorldModel)
-    testDynaQ(gridWorldModel)
+    # testRandomPolicy(gridWorldModel)
+    eval_pi = testDynaQ(gridWorldModel)
     #test1(gridWorldModel)
-    testMonteCarlo(gridWorldModel)
+    #mc_pi = testMonteCarlo(gridWorldModel)
+    compareToBaseLine(gridWorldModel,eval_pi, k)
 
     # Example initialization of TileCoding
     num_tilings = 6
