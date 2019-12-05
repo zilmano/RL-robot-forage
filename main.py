@@ -5,6 +5,7 @@ import utility as util
 import policy
 from TileCoding import TileCodingGridWorldWItems
 from GridWorldEnv import GridWorld, Item, Actions
+from ExampleEnv import GridWorldPage60
 from dynaQ import tabular_dyna_q
 import MonteCarloControl as mc
 from policy import PolicyType
@@ -61,9 +62,10 @@ def testDynaQ(gridWorldModel):
     q, pi = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,one_episode=False)
     gridWorldModel.setQ(q,pi)
     visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
-    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
-    visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
+    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
+    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
     visualizeGridValueFunc(gridWorldModel)
+    gridWorldModel.heatMap()
     print(q)
 
 def testMonteCarlo(gw):
@@ -106,10 +108,10 @@ if __name__ == "__main__":
     util.openlog('log.txt')
 
     # Intitalize 4x4 gridworld with 2 items
-    n = 4
-    m = 4
+    n = 8
+    m = 8
     k = 2
-    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=False)
+    gridWorldModel = GridWorld(m,n,k,debug=False, gamma=0.99, no_stochastisity=True)
     visualizeGridValueFunc(gridWorldModel)
     visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
 
@@ -117,12 +119,10 @@ if __name__ == "__main__":
    # testRandomPolicy(gridWorldModel)
     testDynaQ(gridWorldModel)
     #test1(gridWorldModel)
-    testMonteCarlo(gridWorldModel)
+    #testMonteCarlo(gridWorldModel)
 
     # Example initialization of TileCoding
     num_tilings = 6
     tile_width = np.array([0.0,0.0]) # Initialize tile width to zero, the tile width will be automatically calculated by
                                  # TileCoding class with respect to the num of tilings.
     tc = TileCodingGridWorldWItems(np.array([0,0]),np.array([m,n]),num_tilings,tile_width,k,calc_tile_width=True)
-
-

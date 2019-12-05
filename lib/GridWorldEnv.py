@@ -7,6 +7,7 @@ from scipy import stats
 import math
 from graph import GridGraphWithItems
 import sys
+import matplotlib.pyplot as plt
 
 
 class Actions(IntEnum):
@@ -319,7 +320,21 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         return  (next_state,reward,final)'''
 
     def heatMap(self):
-        pass
+        map = np.zeros([self.m, self.n])
+        for i in range(self.m):
+            for j in range(self.n):
+                map[j][i] = round(self.V[i*self.m + j], 2)
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(map)
+
+        for i in range(self.m):
+            for j in range(self.n):
+                text = ax.text(i, j, map[j, i], ha="center", va="center", color="w")
+
+        ax.set_title("Value Function Heat Map")
+        fig.tight_layout()
+        plt.show()
 
     @property
     def state(self):
