@@ -111,7 +111,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
     step_count = 0
     episode_count = 0
     print("doing episode num 0")
-    for i in tqdm(range(num_steps)):
+    #for i in tqdm(range(num_steps)):
+    for i in range(0,num_steps):
         S = grid_world.state
         A = pi.action(S)
         previously_visited.append((S, A))
@@ -129,6 +130,7 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
                                        - q[sim_state][
             sim_action])
             update_policy(q, sim_state, pi)
+        update_policy(q, SP, pi)
 
         #pi = update_policy(q, num_states, num_actions)
 
@@ -137,13 +139,14 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
         while final:
             (test, final) = grid_world.reset(random_start_cell=True)
             if not final:
-                print("   episode steps:" + str(step_count))
+                if episode_count % 100 == 0:
+                    print("   episode steps:" + str(step_count))
+                    print("doing episode num {}".format(episode_count))
                 last_ep_step_count[episode_count%20] = step_count
                 step_count = 0
                 episode_count += 1
                 #print(test)
                 #util.visualizeGridTxt(grid_world, grid_world.V)
-                print("doing episode num {}".format(episode_count))
                 if episode_count == num_of_episodes:
                     return q, pi
 
