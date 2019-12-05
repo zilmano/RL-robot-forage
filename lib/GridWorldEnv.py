@@ -42,8 +42,11 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
 
         # Total state size is grid size multiplied by all combinations of items found status.
         # For example grid cell zero would be a different state when none items are found, and when item ony 1 is
-        # found.
-        STATE_SPACE_SIZE = m*n*(pow(2,k)-1)+1
+        # found. Then, its multiplied by 16, to represent the visit status of the neighbors cells. Each
+        # combination of
+        # visited neighbors is a different state. 4 neigbors, so 16 combinations.
+        # To conclude, state space is: grid_size*|combinations of found items|*|combination of neighboors visit status|
+        STATE_SPACE_SIZE = m*n*(pow(2,k)-1)*16+1
         self.m = m  # rows
         self.n = n  # columns
         self.k = k  # Number of items to search
@@ -185,21 +188,23 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 trans_mat[state][Actions.south][state + 1] = 1
                 r_mat[state][Actions.south][state + 1] = -1
 
+        # reward_for_item = 1
+        reward_for_item = 20
         for item in self.items:
             if item.state < (self.n-1) * self.m:
-                r_mat[item.state+self.m][Actions.west][item.state] += 1
+                r_mat[item.state+self.m][Actions.west][item.state] += reward_for_item
             if item.state >= self.m:
-                r_mat[item.state-self.m][Actions.east][item.state] += 1
+                r_mat[item.state-self.m][Actions.east][item.state] += reward_for_item
             if item.state not in range(0, self.grid_size, self.m):
-                r_mat[item.state - 1][Actions.south][item.state] += 1
+                r_mat[item.state - 1][Actions.south][item.state] += reward_for_item
             if item.state not in range(self.m - 1, self.grid_size, self.m):
-                r_mat[item.state+1][Actions.north][item.state] += 1
+                r_mat[item.state+1][Actions.north][item.state] += reward_for_item
 
         return trans_mat, r_mat
 
     def _update_trans_mat(self):
         #reward_after_visit = -5
-        reward_after_visit = -1
+        reward_after_visit = -5
         if self._grid_cell < (self.n - 1) * self.m:
             self.r_mat[self._grid_cell + self.m][Actions.west][self._grid_cell] = reward_after_visit
         if self._grid_cell >= self.m:
@@ -215,6 +220,25 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             item_indx = ord(item_in_loc.name) - 97
             self.items_status[item_indx] = 1
         self.item_locations[row][col] = []
+
+    def _get_visited_neighbors(self):
+        # Costract bin array with the structure (1 -visted, 0 -not visited):
+
+        neighbors_visit_status = np.zeros(4)
+        if self._grid_cell >= self.m:
+            neighbors_visit_status[0] = self.already_visited[self._grid_cell-self.m]
+
+        if self._grid_cell not in range(0, self.grid_size, self.m):
+            neighbors_visit_status[1] = self.already_visited[self._grid_cell - 1]
+
+        if self._grid_cell < (self.n - 1) * self.m:
+            neighbors_visit_status[2] = self.already_visited[self._grid_cell + self.m]
+
+        if self._grid_cell not in range(self.m - 1, self.grid_size, self.m):
+            neighbors_visit_status[3] = self.already_visited[self._grid_cell + 1]
+
+        return neighbors_visit_status
+
 
     def reset(self, start_cell=0, random_start_cell=False):
         # Random_state wins start_state. Don't use together.
@@ -251,7 +275,9 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         if items_status_state == pow(2,self.k)-1:
             self._state = self.spec.nS-1
         else:
-            self._state = int(self._grid_cell + items_status_state*self.grid_size)
+            neighbors_status = sum(self._get_visited_neighbors() * np.power(np.ones(4) * 2, np.arange(0,4)))
+            self._state = int((self._grid_cell + items_status_state*self.grid_size)+\
+                              neighbors_status*self.grid_size*(pow(2,self.k)-1))
 
         if self.items_to_go == 0:
             self._final_state = True
@@ -293,7 +319,9 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         if items_status_state == pow(2,self.k)-1:
             self._state = self.spec.nS-1
         else:
-            self._state = int(self._grid_cell + items_status_state * self.grid_size)
+            neighbors_status = sum(self._get_visited_neighbors() * np.power(np.ones(4) * 2, np.arange(0, 4)))
+            self._state = int((self._grid_cell + items_status_state * self.grid_size) +
+                              neighbors_status*self.grid_size*(pow(2,self.k)-1))
 
         if self.items_to_go == 0:
             self._final_state = True
