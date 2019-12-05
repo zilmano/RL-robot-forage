@@ -27,13 +27,14 @@ class ValueFunctionWithApproximation(object):
         """
         raise NotImplementedError()
 
-class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
+class TileCodingApproximation(ValueFunctionWithApproximation):
     def __init__(self,
                  state_low:np.array,
                  state_high:np.array,
                  num_tilings:int,
                  tile_width:np.array,
                  num_of_items:int,
+                 grid_size:int,
                  calc_tile_width = True):
         """
         state_low: possible minimum value for each dimension in state
@@ -64,6 +65,7 @@ class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
         for d in range(0, dim):
             self.X_vector_size *= self.num_of_tiles[d]
         self.X_vector_size += num_of_items # The last 6 weights are for each of the items (1 if the the item is found)
+        self.X_vector_size += grid_size
         self.num_tilings = num_tilings
         self.num_of_items = num_of_items
         self.tiling_weights = np.zeros(self.X_vector_size)
@@ -90,13 +92,14 @@ class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
             self.tiling_weights[self._feature_indices_to_row_index((i,2,3))] = 2
     '''
 
-    def _get_features(self,s,items_list,debug = False):
+    def _get_features(self, s, items_list, already_visited, debug=False):
         for d in range(0,self.dim):
             assert (s[d] <= self.state_high[d] and s[d] >= self.state_low[d]), "state value in dimension {} is out of bounds!".format(d)
         features = []
 
         x = np.zeros(self.X_vector_size)
-        x[self.X_vector_size-self.num_of_items:] = items_list
+        x[self.X_vector_size-self.grid_size-self.num_of_items:] = items_list
+        x[self.X_vector_size-self.grid_size:] = already_visited
         for tiling_index in range(0,self.num_tilings):
             feature_indices = [tiling_index,]
             for dim_index in range(0,self.dim):
@@ -117,7 +120,7 @@ class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
                 print("feature {} weights {} ".format(feature_indices, self.tiling_weights[row_index]))
             x[row_index] = 1
 
-        return (x,features)
+        return x,features
 
     def _feature_indices_to_row_index(self,feature_indices):
         row_index = 0
@@ -128,14 +131,14 @@ class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
             prev_dim_size *= self.num_of_tiles[d]
         return row_index
 
-    def __call__(self,s,items_list):
+    def __call__(self,s,items_list,already_visited)
 
-        x,_ = self._get_features(s,items_list)
+        x,_ = self._get_features(s,items_list,already_visited)
         v = np.dot(self.tiling_weights,x)
         return v
 
 
-    def update(self,alpha,G,s,items_list):
+    def update(self,alpha,G,s,items_list,already_visited):
         """
                 Implement the update rule;
                 w <- w + \alpha[G- \hat{v}(s_tau;w)] \nabla\hat{v}(s_tau;w)
@@ -147,7 +150,7 @@ class TileCodingGridWorldWItems(ValueFunctionWithApproximation):
                 ouptut:
                     None
                 """
-        x = np.array(self._get_features(s,items_list)[0])
+        x = np.array(self._get_features(s,items_list,already_visited)[0])
         Vhat = self(s,items_list)
         self.tiling_weights += alpha*(G - Vhat) * x
 
