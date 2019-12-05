@@ -7,6 +7,7 @@ import utility as util
 import policy
 from TileCoding import TileCodingApproximation
 from GridWorldEnv import GridWorld, Item, Actions
+from ExampleEnv import GridWorldPage60
 from dynaQ import tabular_dyna_q
 import MonteCarloControl as mc
 from policy import PolicyType
@@ -78,6 +79,7 @@ def testDynaQ(gridWorldModel):
     #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
     #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
     #visualizeGridValueFunc(gridWorldModel)
+    gridWorldModel.heatMap()
     print(q)
     return pi
 
