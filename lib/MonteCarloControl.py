@@ -1,49 +1,12 @@
 import numpy as np
 from tqdm import tqdm
 from policy import PolicyType
-class Simulation:
-    def __init__(self,env,pi)->None:
-        assert env.spec.nA == pi.nA and env.spec.nS == pi.nS, "policy and environment are not compatible. Not the " \
-                                                              "the number of the states and actions differ."
-        self._env = env
-        self._pi = pi
-
-    @property
-    def pi(self):
-        return self._pi
-
-    @property
-    def env(self):
-        return self._env
-
-    def get_trajectory(self,N_truncation = None):
-        init_state, done = self._env.reset(random_start_cell=True)
-        states, actions, rewards, done = \
-            [[init_state], [], [], done]
-        step = 0
-        while not done and (N_truncation is None or step < N_truncation):
-            a = self._pi.action(states[-1])
-            s, r, done,a = self._env.step_using_policy(self._pi)
-            states.append(s)
-            actions.append(a)
-            rewards.append(r)
-            step += 1
-        print("   traj steps:" + str(step))
-        return list(zip(states[:-1],actions,rewards,states[1:]))
-
-    def get_trajectories(self,episode_num, N_truncation = None):
-        util.logmsg("generating trajectories...")
-        trajs = []
-        for _ in tqdm(range(episode_num)):
-            trajs.append(self.get_trajectory(N_truncation))
-        return trajs
-
 
 
 def on_policy_mc_control(
     initQ:np.array,
     e_soft_epsilon,
-    simulation,
+    sim,
     episode_num,
     N_truncation = None,
     alpha = None,
@@ -60,16 +23,16 @@ def on_policy_mc_control(
     ret:
         Q: $q_pi$ function; numpy array shape of [nS,nA]
     """
-    env_spec = simulation.env.spec
+    env_spec = sim.env.spec
     V = np.zeros(env_spec.nS)
     Q = initQ
     num_of_S_A = np.ones([env_spec.nS,env_spec.nA])
-    pi = simulation.pi
+    pi = sim.pi
     ep_count = 0
     for _ in tqdm(range(episode_num)):
         print("doing episode num {}".format(ep_count))
         ep_count += 1
-        traj = simulation.get_trajectory(N_truncation)
+        traj = sim.get_trajectory(N_truncation)
         occurance_num_in_traj = np.zeros([env_spec.nS, env_spec.nA])
         for (s_t,a_t,r,s_next) in traj:
             occurance_num_in_traj[s_t][a_t] += 1
@@ -94,7 +57,4 @@ def on_policy_mc_control(
         for a in range(0, env_spec.nA):
             V[s] += pi.action_prob(s,a)*Q[s][a]
 
-
-    print(V)
-    print(Q)
     return Q,V,pi
