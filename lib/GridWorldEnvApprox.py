@@ -35,7 +35,7 @@ class Item:
         self.state = int(col*self.m + row)
 
 
-class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
+class GridWorldApproxModel(Env):  # MDP introduced at Fig 5.4 in Sutton Book
     def __init__(self, m, n, k, gamma=1, debug=False, no_stochastisity=False):
         # (m x n) grid world
         self.grid_size = m*n
@@ -53,7 +53,6 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         self.items = list()
         self.debug = debug
         self._final_state = False
-        self._state = None
         self._grid_cell = None
         self.trans_mat = None
         self.r_mat = None
@@ -188,21 +187,21 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 trans_mat[state][Actions.south][state + 1] = 1
                 r_mat[state][Actions.south][state + 1] = -1
 
-        for item in self.items:
+        '''for item in self.items:
             if item.state < (self.n-1) * self.m:
-                r_mat[item.state+self.m][Actions.west][item.state] += 1
+                r_mat[item.state+self.m][Actions.west][item.state] += 20
             if item.state >= self.m:
-                r_mat[item.state-self.m][Actions.east][item.state] += 1
+                r_mat[item.state-self.m][Actions.east][item.state] += 20
             if item.state not in range(0, self.grid_size, self.m):
-                r_mat[item.state - 1][Actions.south][item.state] += 1
+                r_mat[item.state - 1][Actions.south][item.state] += 20
             if item.state not in range(self.m - 1, self.grid_size, self.m):
-                r_mat[item.state+1][Actions.north][item.state] += 1
+                r_mat[item.state+1][Actions.north][item.state] += 20'''
 
         return trans_mat, r_mat
 
     def _update_trans_mat(self):
         #reward_after_visit = -5
-        reward_after_visit = -5
+        reward_after_visit = -15
         if self._grid_cell < (self.n - 1) * self.m:
             self.r_mat[self._grid_cell + self.m][Actions.west][self._grid_cell] = reward_after_visit
         if self._grid_cell >= self.m:
@@ -261,11 +260,10 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             util.logmsg("reset complete.")
             util.logmsg("grid_cell {}",(self._grid_cell,))
 
-        return self._grid_cell, self._item_status, self.already_visited, self._final_state
+        return self._getRowColFromState(self._grid_cell), self.items_status, self.already_visited, self._final_state
 
     def step(self, action):
         assert Actions.west <= action < self.spec.nA, "Invalid Action!"
-        assert 0 <= self._state < self.spec.nS, "Invalid State!"
         assert not self._final_state, "Episode has already finished. Please restart!"
 
         prev_grid_cell = self._grid_cell
@@ -289,35 +287,22 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         if self.items_to_go == 0:
             self._final_state = True
 
-        return self._grid_cell, r, self._item_status, self.already_visited, self._final_state
+        return self._getRowColFromState(self._grid_cell), self.items_status, self.already_visited, self._final_state, r
 
     def step_using_policy(self, pi):
-        action = pi.action(self._state)
-        return self.step(action) + (action,)
-
-    '''def next_reward_and_state(self,state,action):
-        ##
-        ## Simulate a step from a given state without actually moving (i.e just return s_next and r)
-
-        curr_state = self._state
-        is_at_final = self._final_state
-        self._state = state
-        (next_state,reward,final) = self.step(action)
-        self.reset()
-        self._state = curr_state
-        self._is_final = is_at_final
-        return  (next_state,reward,final)'''
+        action = pi.action(self._grid_cell, self.items_status, self.already_visited, self._final_state)
+        return (action,) + self.step(action)
 
     def heatMap(self):
         pass
 
     @property
-    def state(self):
-        return self._state
+    def features(self):
+        return self._getRowColFromState(self._grid_cell), self.items_status, self.already_visited, self._final_state
 
     @property
     def grid_cell(self):
-        return self._grid_cell
+        return self._getRowColFromState(self._grid_cell)
 
     @property
     def final(self):
