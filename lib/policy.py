@@ -78,7 +78,7 @@ class ApproximatePolicy(Policy):
         return self.approximators[action](*features)
 
     def action(self,state, greedy=False):
-        for Qvalue in approximators:
+        #for Qvalue in approximators:
 
         if not greedy:
             return np.random.choice(self._nA, p=self._p[state])

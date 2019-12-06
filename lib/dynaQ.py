@@ -94,7 +94,7 @@ def update_policy(q,s,pi):
     return pi'''
 
 
-def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None):
+def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None, eps=0.3):
     #References Sutton Book pg. 164
 
     q = init_q
@@ -103,7 +103,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
     gamma = grid_world.spec.gamma
     model = Model(num_states, num_actions)
     previously_visited = []
-    pi = EpsilonGreedyPolicy(num_actions, num_states,eps=0.3)
+    episode_steps = []
+    pi = EpsilonGreedyPolicy(num_actions, num_states, eps=eps)
     if grid_world.final:
         return q, pi
 
@@ -144,21 +145,28 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
                     print("   episode steps:" + str(step_count))
                     print("doing episode num {}".format(episode_count))
                 last_ep_step_count[episode_count%20] = step_count
+                episode_steps.append(step_count)
                 step_count = 0
                 episode_count += 1
                 #print(test)
                 #util.visualizeGridTxt(grid_world, grid_world.V)
                 if episode_count == num_of_episodes:
-                    return q, pi
+                    #eps = range(len(episode_steps))
+                    #plot(eps, episode_steps)
+                    #xlabel('Episodes')
+                    #ylabel('Steps')
+                    #title('Steps per Episode')
+                    #show()
+                    return q, pi, episode_steps
 
     avg_step_count = last_ep_step_count.sum()/20
     print( " Dyna Finished. Epsidoes run: {} Average Steps Per Episode {} - Last Episode Steps: {}".format(episode_count,avg_step_count,last_ep_step_count))
 
     #Steps per episode graph
-    eps = range(len(episode_steps))
-    plot(eps, episode_steps)
-    xlabel('Episodes')
-    ylabel('Steps per Episode')
-    show()
+    #eps = range(len(episode_steps))
+    #plot(eps, episode_steps)
+    #xlabel('Episodes')
+    #ylabel('Steps per Episode')
+    #show()
 
-    return q, pi
+    return q, pi, episode_steps

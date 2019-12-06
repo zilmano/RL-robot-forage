@@ -131,7 +131,7 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
             prev_dim_size *= self.num_of_tiles[d]
         return row_index
 
-    def __call__(self,s,items_list,already_visited)
+    def __call__(self,s,items_list,already_visited):
 
         x,_ = self._get_features(s,items_list,already_visited)
         v = np.dot(self.tiling_weights,x)
