@@ -35,7 +35,8 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
                  tile_width:np.array,
                  num_of_items:int,
                  grid_size:int,
-                 calc_tile_width = True):
+                 calc_tile_width=True,
+                 no_tile_coding=False):
         """
         state_low: possible minimum value for each dimension in state
         state_high: possible maximum value for each dimension in state
@@ -43,43 +44,55 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
         tile_width: tile width for each dimension
         """
         assert state_high.ndim == state_low.ndim, "dimensions of both state boundaries should be the same"
+        assert grid_size == state_high.prod(), "grid size provided goes not match the state boundaries "
+
+
         dim = state_low.size
-        if calc_tile_width:
-            # If this flag this enabled, set the number of tiles per dimension to 'num_tilings', and calculate the
-            # width accordingly.
-            auto_tile_width = np.zeros([dim])
+        if not no_tile_coding:
+            if calc_tile_width:
+                # If this flag this enabled, set the number of tiles per dimension to 'num_tilings', and calculate the
+                # width accordingly.
+                auto_tile_width = np.zeros([dim])
+                for d in range(0, dim):
+                    auto_tile_width[d] = num_tilings*(state_high[d] - state_low[d]) / ((num_tilings - 1) * num_tilings + 1)
+                self.tile_width = auto_tile_width
+            else:
+                self.tile_width = tile_width
+            fundamental_unit_width = self.tile_width/num_tilings
+            self.num_of_tiles = dim*[0]
+            for d in range(0,dim):
+                self.num_of_tiles[d] = math.ceil((state_high[d]-state_low[d])/self.tile_width[d])+1
+            self.X_vector_size = num_tilings
             for d in range(0, dim):
-                auto_tile_width[d] = num_tilings*(state_high[d] - state_low[d]) / ((num_tilings - 1) * num_tilings + 1)
-            self.tile_width = auto_tile_width
+                self.X_vector_size *= self.num_of_tiles[d]
+            self.tiling_limits = np.zeros([num_tilings, dim, max(*self.num_of_tiles, num_tilings) + 1],
+                                          dtype=np.float32)
         else:
-            self.tile_width = tile_width
-        fundamental_unit_width = self.tile_width/num_tilings
-        self.num_of_tiles = dim*[0]
-        for d in range(0,dim):
-            self.num_of_tiles[d] = math.ceil((state_high[d]-state_low[d])/self.tile_width[d])+1
+            self.X_vector_size = grid_size
+
         self.state_low = state_low
         self.state_high = state_high
         self.dim = dim
+        self.grid_size = state_high.prod()
+        self.no_tile_coding = no_tile_coding
 
-        self.X_vector_size = num_tilings
-        for d in range(0, dim):
-            self.X_vector_size *= self.num_of_tiles[d]
         self.X_vector_size += num_of_items # The last 6 weights are for each of the items (1 if the the item is found)
         self.X_vector_size += grid_size
         self.num_tilings = num_tilings
         self.num_of_items = num_of_items
         self.tiling_weights = np.zeros(self.X_vector_size)
-        self.tiling_limits = np.zeros([num_tilings,dim,max(*self.num_of_tiles,num_tilings)+1],dtype=np.float32)
+
         #offset = 1.12
-        offset = 1
-        for tiling_index in range(0,num_tilings):
-            for d in range(0,dim):
-                lower_bound = state_low[d]
-                lower_bound -= tiling_index * fundamental_unit_width[d]*offset
-                self.tiling_limits[tiling_index][d][0] = lower_bound
-                for tilenum in range(1,self.num_of_tiles[d]+1):
-                    lower_bound +=self.tile_width[d]
-                    self.tiling_limits[tiling_index][d][tilenum] = lower_bound
+        if not no_tile_coding:
+            offset = 1
+            for tiling_index in range(0,num_tilings):
+                for d in range(0,dim):
+                    lower_bound = state_low[d]
+                    lower_bound -= tiling_index * fundamental_unit_width[d]*offset
+                    self.tiling_limits[tiling_index][d][0] = lower_bound
+                    for tilenum in range(1,self.num_of_tiles[d]+1):
+                        lower_bound +=self.tile_width[d]
+                        self.tiling_limits[tiling_index][d][tilenum] = lower_bound
 
     '''
     # Debug function
@@ -98,29 +111,34 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
         features = []
 
         x = np.zeros(self.X_vector_size)
-        x[self.X_vector_size-self.grid_size-self.num_of_items:] = items_list
+        x[self.X_vector_size-self.grid_size-self.num_of_items:self.X_vector_size-self.grid_size] = items_list
         x[self.X_vector_size-self.grid_size:] = already_visited
-        for tiling_index in range(0,self.num_tilings):
-            feature_indices = [tiling_index,]
-            for dim_index in range(0,self.dim):
-                dim_feature_index = None
-                for tile_index in range(0,self.num_of_tiles[dim_index]):
-                    if (s[dim_index] >= self.tiling_limits[tiling_index][dim_index][tile_index] and s[dim_index] < self.tiling_limits[tiling_index][dim_index][tile_index+1] ):
-                        dim_feature_index = tile_index
-                        break
-                if s[dim_index] == self.tiling_limits[tiling_index][dim_index][-1]:
-                    dim_feature_index = self.num_of_tiles[dim_index]-1
-                elif dim_feature_index is None:
-                    # sanity check
-                    sys.exit("State in dimension {} is not covered by the tiling (out of bounds)")
-                feature_indices.append(dim_feature_index)
-            row_index = self._feature_indices_to_row_index(feature_indices)
-            if debug:
-                features.append(tuple(feature_indices))
-                print("feature {} weights {} ".format(feature_indices, self.tiling_weights[row_index]))
-            x[row_index] = 1
+        if not self.no_tile_coding:
+            for tiling_index in range(0,self.num_tilings):
+                feature_indices = [tiling_index,]
+                for dim_index in range(0,self.dim):
+                    dim_feature_index = None
+                    for tile_index in range(0,self.num_of_tiles[dim_index]):
+                        if (s[dim_index] >= self.tiling_limits[tiling_index][dim_index][tile_index] and s[dim_index] < self.tiling_limits[tiling_index][dim_index][tile_index+1] ):
+                            dim_feature_index = tile_index
+                            break
+                    if s[dim_index] == self.tiling_limits[tiling_index][dim_index][-1]:
+                        dim_feature_index = self.num_of_tiles[dim_index]-1
+                    elif dim_feature_index is None:
+                        # sanity check
+                        sys.exit("State in dimension {} is not covered by the tiling (out of bounds)")
+                    feature_indices.append(dim_feature_index)
+                row_index = self._feature_indices_to_row_index(feature_indices)
+                if debug:
+                    features.append(tuple(feature_indices))
+                    print("feature {} weights {} ".format(feature_indices, self.tiling_weights[row_index]))
+                x[row_index] = 1
+        else:
+            assert self.dim == 2 and len(s) == 2, "'no_tile_coding' is only available for 2D spaces"
 
-        return x,features
+            state_index = int(s[1]*self.state_high[0] + s[0])
+            x[state_index] = 1
+        return x, features
 
     def _feature_indices_to_row_index(self,feature_indices):
         row_index = 0
@@ -131,14 +149,28 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
             prev_dim_size *= self.num_of_tiles[d]
         return row_index
 
-    def __call__(self,s,items_list,already_visited)
+    def __call__(self,s,items_list,already_visited,is_final,debug=False):
+        if debug:
+            print("evaluating Q values;;;")
+            print("s " + str(s))
+            print("items_list " + str(items_list))
+        #print("is_final " + str(is_final))
+        #print("already_visited " + str(already_visited))
 
-        x,_ = self._get_features(s,items_list,already_visited)
-        v = np.dot(self.tiling_weights,x)
+        if is_final:
+            return 0
+        x, _ = self._get_features(s,items_list,already_visited)
+        if debug:
+            print("x: ")
+            print("" + str(x))
+            print("tiling weights: ")
+            print("" + str(self.tiling_weights))
+        v = np.dot(self.tiling_weights, x)
+
         return v
 
 
-    def update(self,alpha,G,s,items_list,already_visited):
+    def update(self,alpha,G,s,items_list,already_visited,is_final,debug=False):
         """
                 Implement the update rule;
                 w <- w + \alpha[G- \hat{v}(s_tau;w)] \nabla\hat{v}(s_tau;w)
@@ -150,8 +182,26 @@ class TileCodingApproximation(ValueFunctionWithApproximation):
                 ouptut:
                     None
                 """
+        if is_final:
+            raise ValueError("Can't update value for a final state")
+
         x = np.array(self._get_features(s,items_list,already_visited)[0])
-        Vhat = self(s,items_list)
+
+        if debug:
+            print("updating Q values;;;")
+            print("s " + str(s))
+            print("items_list " + str(items_list))
+            print("   x: ")
+            print("   " + str(x))
+            print("   tiling weights: ")
+            print("   " + str(self.tiling_weights))
+
+
+        Vhat = self(s,items_list,already_visited,is_final)
         self.tiling_weights += alpha*(G - Vhat) * x
+        if debug:
+            print("   weights after updated: ")
+            print("   " + str(self.tiling_weights))
+
 
         return None
