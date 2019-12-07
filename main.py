@@ -331,8 +331,8 @@ if __name__ == "__main__":
 
         # Testing
         # testRandomPolicy(gridWorldModel)
-        #eval_pi = testDynaQ(gridWorldModel)
-        parameterTest()
+        eval_pi = testDynaQ(gridWorldModel)
+        #parameterTest()
         #test1(gridWorldModel)
         #mc_pi = testMonteCarlo(gridWorldModel)
         (nn_avg, sweep_avg, dyna_avg) = compareToBaseLine(gridWorldModel,eval_pi, k)
