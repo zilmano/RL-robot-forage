@@ -25,6 +25,9 @@ class Policy(object):
         raise NotImplementedError()
 
 class NewPolicy(Policy):
+    '''
+    standard e-greedy policy, tabular.
+    '''
     def __init__(self,nA,nS):
         self._nA = nA
         self._nS = nS
@@ -70,52 +73,45 @@ class NewPolicy(Policy):
         self._nS = nS
 
 class ApproximatePolicy(Policy):
-    def __init__(self,nA,nS):
+    '''
+    Policy that has Q approximators fucntors for each action. And it decides
+    e-greedly which action is the best based on the approximators and the provided
+    features
+    '''
+    def __init__(self,nA, approximators=None, eps=.1):
         self._nA = nA
-        self.approximators = nA*[]
+        # each approximators position in the list is the action's index. action 0 will be first, etc.
+        self.approximators = approximators if approximators is not None else nA*[]
+        self.eps = eps
 
     def action_prob(self, features, action):
         return self.approximators[action](*features)
 
-    def action(self,state, greedy=False):
-        #for Qvalue in approximators:
-
+    def action(self,features, greedy=False,eps=None):
+        if eps is None:
+            eps = self.eps
+        qValues = np.array([Q(*features) for Q in self.approximators])
+        max_actions = np.argwhere(qValues == qValues.max()).flatten()
+        non_greedy_actions = np.argwhere(qValues != qValues.max()).flatten()
         if not greedy:
-            return np.random.choice(self._nA, p=self._p[state])
+            if np.random.random() <= eps and len(non_greedy_actions) > 0:
+                return np.random.choice(non_greedy_actions)
+            else:
+                return np.random.choice(max_actions)
         else:
-            max_actions = np.argwhere(self._p[state] == self._p[state].max()).flatten()
             return np.random.choice(max_actions)
 
-    def set_greedy_action(self,state,new_greedy_actions):
-        self._p[state] = np.zeros(self._nA)
-        for action in new_greedy_actions:
-           self._p[state][action] = 1/len(new_greedy_actions)
-
-    def set_e_soft_action(self, state, new_action, e):
-        self._p[state] = np.array(self._nA*[e/self.nA])
-        self._p[state][new_action] = 1 - e + e/self.nA
-
     @property
-    def P(self) -> np.array:
-        return self._p
+    def Q(self) -> np.array:
+        return self.approximators
 
     @property
     def nA(self) -> int:
         return self._nA
 
-    @nA.setter
+    @Q.setter
     def nA(self,nA):
         self._nA = nA
-
-    @property
-    def nS(self) -> int:
-        return self._nS
-
-    @nS.setter
-    def nS(self, nS):
-        self._nS = nS
-
-
 
 
 class HandMadeSweepPolicy(Policy):

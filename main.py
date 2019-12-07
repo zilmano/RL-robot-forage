@@ -5,42 +5,15 @@ import math
 import copy
 import utility as util
 import policy
-from TileCoding import TileCodingApproximation
 from GridWorldEnv import GridWorld, Item, Actions
+from GridWorldEnvApprox import GridWorldApproxModel
 from ExampleEnv import GridWorldPage60
+from dynaQApprox import approx_dyna_q
 from dynaQ import tabular_dyna_q
 import MonteCarloControl as mc
 from policy import PolicyType
 import matplotlib.pyplot as plt
 
-def test1(gridWorldEnv):
-    # Oleg: testing the model with some sequence of steps.
-    (s, r, *_) = gridWorldEnv.step(3)
-    print("s:{} r:{}".format(s, r))
-    (s, r, *_) = gridWorldEnv.step(3)
-    print("s:{} r:{}".format(s, r))
-    (s, r, *_) = gridWorldEnv.step(0)
-    print("s:{} r:{}".format(s, r))
-    (s, r, *_) = gridWorldEnv.step(2)
-    print("s:{} r:{}".format(s, r))
-    (s, r, *_) = gridWorldEnv.step(1)
-    print("s:{} r:{}".format(s, r))
-    util.logmsg(" ")
-    util.logmsg("-----   reward funtion at state 5 -----")
-    '''for i in range(0, gridWorldEnv.spec.nS):
-        util.logmsg("state:{}\n   {}".format(i, gridWorldEnv.r_mat[i]))'''
-    util.logmsg("\n")
-    (s, r, *_) = gridWorldEnv.step(2)
-    print("s:{} r:{}".format(s, r))
-    (s, r, *_) = gridWorldEnv.step(3)
-    print("s:{} r:{}".format(s, r))
-    util.logmsg(" ")
-    util.logmsg("-----   reward funtion at state 5 -----")
-    '''for i in range(0, gridWorldEnv.spec.nS):
-        util.logmsg("state:{}\n   {}".format(i, gridWorldEnv.r_mat[i]))
-    util.logmsg("\n")'''
-    (s, r, f) = gridWorldEnv.step(0)
-    print("s:{} r:{} f:{}".format(s, r, f))
 
 def testRandomPolicy(gridWorldModel):
     # Run two episodes with a random policy
@@ -252,6 +225,20 @@ def parameterTest():
     plt.legend()
     plt.show()
 
+def testApproxDynaQ(gridWorldModel):
+    # Run two episodes with a DynaQ policy
+    training_steps = 10000
+    model_training_steps = None
+    learning_rate = 0.0001
+    pi = approx_dyna_q(gridWorldModel, learning_rate, training_steps, model_training_steps,
+                            num_of_episodes=40000)
+    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
+    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
+    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
+    #visualizeGridValueFunc(gridWorldModel)
+    gridWorldModel.heatMap()
+    return pi
+
 def testMonteCarlo(gw):
     Q = np.zeros((gridWorldModel.spec.nS, gridWorldModel.spec.nA))
     randomPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
@@ -266,9 +253,8 @@ def testMonteCarlo(gw):
     visualizeGridValueFunc(gw)
     return pi
 
-def compareToBaseLine(gw,eval_pi,k):
+def compareToBaseLine(gw, eval_pi, k, episodes_num=100):
     sweep_pi = policy.HandMadeSweepPolicy(4, m, n)
-    episodes_num = 100
     sweep_steps = 0
     rl_steps = 0
 
@@ -304,7 +290,6 @@ def visualizeGridValueFunc(gridWorldModel):
 
 
 def visualizeGridProbabilities(gridWorldModel, k, aggregate=False):
-
     if not aggregate:
         for i in range(0, k):
             util.visualizeGridTxt(gridWorldModel, gridWorldModel.item_loc_probabilities[i])
@@ -320,9 +305,15 @@ if __name__ == "__main__":
     m = 8
     k = 2
 
+    # gridWorldModel = GridWorldApproxModel(m, n, k, debug=False, gamma=1, no_stochastisity=False)
+    # eval_pi = testApproxDynaQ(gridWorldModel)
+    # eval_pi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
+    # compareToBaseLine(gridWorldModel, eval_pi, k)
+
     nn_avgs = []
     sweep_avgs = []
     dyna_avgs = []
+
     # Run for 10 different distributions. Train RL, and then compare on 100 episodes each.
     for i in range(0,10):
         gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=False)
@@ -366,8 +357,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    # Example initialization of TileCoding
-    '''num_tilings = 6
-    tile_width = np.array([0.0,0.0]) # Initialize tile width to zero, the tile width will be automatically calculated by
-                                 # TileCoding class with respect to the num of tilings.
-    tc = TileCodingGridWorldWItems(np.array([0,0]),np.array([m,n]),num_tilings,tile_width,k,n*m,calc_tile_width=True)'''
+
+
