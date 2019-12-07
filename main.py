@@ -61,20 +61,20 @@ def testDynaQ(gridWorldModel):
 
 def parameterTest():
 
-    train5eps1_avgs = []
-    train5eps2_avgs = []
-    train5eps3_avgs = []
-    train20eps1_avgs = []
-    train20eps2_avgs = []
-    train20eps3_avgs = []
     train50eps1_avgs = []
     train50eps2_avgs = []
     train50eps3_avgs = []
+    train70eps1_avgs = []
+    train70eps2_avgs = []
+    train70eps3_avgs = []
+    train100eps1_avgs = []
+    train100eps2_avgs = []
+    train100eps3_avgs = []
 
     training_steps = 10000000
 
-    for i in range(0,5):
-        gridWorldModel = GridWorld(m,n,k,debug=False, gamma=.95, no_stochastisity=False)
+    for i in range(0,3):
+        gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=False)
 
         Q1 = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
         Q2 = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
@@ -88,9 +88,9 @@ def parameterTest():
 
         learning_rate = 0.1
 
-        q1, pi1, episode_steps1 = tabular_dyna_q(gridWorldModel, Q1, learning_rate, training_steps, 5, num_of_episodes=1000, eps=0.1)
-        q2, pi2, episode_steps2 = tabular_dyna_q(gridWorldModel, Q2, learning_rate, training_steps, 5, num_of_episodes=1000, eps=0.2)
-        q3, pi3, episode_steps3 = tabular_dyna_q(gridWorldModel, Q3, learning_rate, training_steps, 5, num_of_episodes=1000, eps=0.3)
+        q1, pi1, episode_steps1 = tabular_dyna_q(gridWorldModel, Q1, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.1)
+        q2, pi2, episode_steps2 = tabular_dyna_q(gridWorldModel, Q2, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.2)
+        q3, pi3, episode_steps3 = tabular_dyna_q(gridWorldModel, Q3, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.3)
 
         #eps = range(len(episode_steps1))
         #plt.plot(eps, episode_steps1)
@@ -101,9 +101,9 @@ def parameterTest():
         #plt.title('Steps per Episode')
         #plt.show()
 
-        q4, pi4, episode_steps4 = tabular_dyna_q(gridWorldModel, Q4, learning_rate, training_steps, 20, num_of_episodes=1000, eps=0.1)
-        q5, pi5, episode_steps5 = tabular_dyna_q(gridWorldModel, Q5, learning_rate, training_steps, 20, num_of_episodes=1000, eps=0.2)
-        q6, pi6, episode_steps6 = tabular_dyna_q(gridWorldModel, Q6, learning_rate, training_steps, 20, num_of_episodes=1000, eps=0.3)
+        q4, pi4, episode_steps4 = tabular_dyna_q(gridWorldModel, Q4, learning_rate, training_steps, 70, num_of_episodes=1000, eps=0.1)
+        q5, pi5, episode_steps5 = tabular_dyna_q(gridWorldModel, Q5, learning_rate, training_steps, 70, num_of_episodes=1000, eps=0.2)
+        q6, pi6, episode_steps6 = tabular_dyna_q(gridWorldModel, Q6, learning_rate, training_steps, 70, num_of_episodes=1000, eps=0.3)
 
         #eps = range(len(episode_steps4))
         #plt.plot(eps, episode_steps4)
@@ -114,9 +114,9 @@ def parameterTest():
         #plt.title('Steps per Episode')
         #plt.show()
 
-        q7, pi7, episode_steps7 = tabular_dyna_q(gridWorldModel, Q7, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.1)
-        q8, pi8, episode_steps8 = tabular_dyna_q(gridWorldModel, Q8, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.2)
-        q9, pi9, episode_steps9 = tabular_dyna_q(gridWorldModel, Q9, learning_rate, training_steps, 50, num_of_episodes=1000, eps=0.3)
+        q7, pi7, episode_steps7 = tabular_dyna_q(gridWorldModel, Q7, learning_rate, training_steps, 100, num_of_episodes=1000, eps=0.1)
+        q8, pi8, episode_steps8 = tabular_dyna_q(gridWorldModel, Q8, learning_rate, training_steps, 100, num_of_episodes=1000, eps=0.2)
+        q9, pi9, episode_steps9 = tabular_dyna_q(gridWorldModel, Q9, learning_rate, training_steps, 100, num_of_episodes=1000, eps=0.3)
 
         #eps = range(len(episode_steps7))
         #plt.plot(eps, episode_steps7)
@@ -127,15 +127,15 @@ def parameterTest():
         #plt.title('Steps per Episode')
         #plt.show()
 
-        train5eps1_steps = 0
-        train5eps2_steps = 0
-        train5eps3_steps = 0
-        train20eps1_steps = 0
-        train20eps2_steps = 0
-        train20eps3_steps = 0
         train50eps1_steps = 0
         train50eps2_steps = 0
         train50eps3_steps = 0
+        train70eps1_steps = 0
+        train70eps2_steps = 0
+        train70eps3_steps = 0
+        train100eps1_steps = 0
+        train100eps2_steps = 0
+        train100eps3_steps = 0
 
         for i in range(0, 10):
             #print("inst world model...")
@@ -152,76 +152,76 @@ def parameterTest():
 
             #visualizeGridValueFunc(gw)
             #print("exec sweep policy for episode...")
-            train5eps1_steps += exec_policy_for_episode(gw1, pi1)
-            train5eps2_steps += exec_policy_for_episode(gw2, pi2)
-            train5eps3_steps += exec_policy_for_episode(gw3, pi3)
-            train20eps1_steps += exec_policy_for_episode(gw4, pi4)
-            train20eps2_steps += exec_policy_for_episode(gw5, pi5)
-            train20eps3_steps += exec_policy_for_episode(gw6, pi6)
-            train50eps1_steps += exec_policy_for_episode(gw7, pi7)
-            train50eps2_steps += exec_policy_for_episode(gw8, pi8)
-            train50eps3_steps += exec_policy_for_episode(gw9, pi9)
+            train50eps1_steps += exec_policy_for_episode(gw1, pi1)
+            train50eps2_steps += exec_policy_for_episode(gw2, pi2)
+            train50eps3_steps += exec_policy_for_episode(gw3, pi3)
+            train70eps1_steps += exec_policy_for_episode(gw4, pi4)
+            train70eps2_steps += exec_policy_for_episode(gw5, pi5)
+            train70eps3_steps += exec_policy_for_episode(gw6, pi6)
+            train100eps1_steps += exec_policy_for_episode(gw7, pi7)
+            train100eps2_steps += exec_policy_for_episode(gw8, pi8)
+            train100eps3_steps += exec_policy_for_episode(gw9, pi9)
             #print("rl steps" + str(rl_steps))
             #print("sweep steps" + str(sweep_steps))
             # nn_tour_expected_steps += gw.graph.calc_path_cost(base_line_tour)
 
-        train5eps1_avgs.append(train5eps1_steps / 10)
-        train5eps2_avgs.append(train5eps2_steps / 10)
-        train5eps3_avgs.append(train5eps3_steps / 10)
-        train20eps1_avgs.append(train20eps1_steps / 10)
-        train20eps2_avgs.append(train20eps2_steps / 10)
-        train20eps3_avgs.append(train20eps3_steps / 10)
         train50eps1_avgs.append(train50eps1_steps / 10)
         train50eps2_avgs.append(train50eps2_steps / 10)
         train50eps3_avgs.append(train50eps3_steps / 10)
+        train70eps1_avgs.append(train70eps1_steps / 10)
+        train70eps2_avgs.append(train70eps2_steps / 10)
+        train70eps3_avgs.append(train70eps3_steps / 10)
+        train100eps1_avgs.append(train100eps1_steps / 10)
+        train100eps2_avgs.append(train100eps2_steps / 10)
+        train100eps3_avgs.append(train100eps3_steps / 10)
 
 
 
-    experiment_nums = ('1', '2', '3', '4', '5')
+    experiment_nums = ('1', '2', '3')
     y_pos = np.arange(len(experiment_nums))
 
     bar_width = 0.075
 
-    rects1 = plt.bar(y_pos, train5eps1_avgs, bar_width,
-    color='b',
-    label='train5eps.1')
-
-    rects2 = plt.bar(y_pos + bar_width, train5eps2_avgs, bar_width,
-    color='g',
-    label='train5eps.2')
-
-    rects3 = plt.bar(y_pos + 2*bar_width, train5eps3_avgs, bar_width,
-    color='r',
-    label='train5eps.3')
-
-    rects4 = plt.bar(y_pos + 3*bar_width, train20eps1_avgs, bar_width,
-    color='b',
-    label='train20eps.1')
-
-    rects5 = plt.bar(y_pos + 4*bar_width, train20eps2_avgs, bar_width,
-    color='g',
-    label='train20eps.2')
-
-    rects6 = plt.bar(y_pos + 5*bar_width, train20eps3_avgs, bar_width,
-    color='r',
-    label='train20eps.3')
-
-    rects7 = plt.bar(y_pos + 6*bar_width, train50eps1_avgs, bar_width,
+    rects1 = plt.bar(y_pos, train50eps1_avgs, bar_width,
     color='b',
     label='train50eps.1')
 
-    rects8 = plt.bar(y_pos + 7*bar_width, train50eps2_avgs, bar_width,
+    rects2 = plt.bar(y_pos + bar_width, train50eps2_avgs, bar_width,
     color='g',
     label='train50eps.2')
 
-    rects9 = plt.bar(y_pos + 8*bar_width, train50eps3_avgs, bar_width,
+    rects3 = plt.bar(y_pos + 2*bar_width, train50eps3_avgs, bar_width,
     color='r',
     label='train50eps.3')
+
+    rects4 = plt.bar(y_pos + 3*bar_width, train70eps1_avgs, bar_width,
+    color='b',
+    label='train70eps.1')
+
+    rects5 = plt.bar(y_pos + 4*bar_width, train70eps2_avgs, bar_width,
+    color='g',
+    label='train70eps.2')
+
+    rects6 = plt.bar(y_pos + 5*bar_width, train70eps3_avgs, bar_width,
+    color='r',
+    label='train70eps.3')
+
+    rects7 = plt.bar(y_pos + 6*bar_width, train100eps1_avgs, bar_width,
+    color='b',
+    label='train100eps.1')
+
+    rects8 = plt.bar(y_pos + 7*bar_width, train100eps2_avgs, bar_width,
+    color='g',
+    label='train100eps.2')
+
+    rects9 = plt.bar(y_pos + 8*bar_width, train100eps3_avgs, bar_width,
+    color='r',
+    label='train100eps.3')
 
     plt.xticks(y_pos+bar_width, experiment_nums)
     plt.ylabel('Average Number of Steps')
     plt.xlabel('Experiment Number')
-    plt.title('Average Number of Steps per Combination with Reward 1')
+    plt.title('Average Number of Steps per Combination with Reward 20')
     plt.legend()
     plt.show()
 
@@ -356,6 +356,3 @@ if __name__ == "__main__":
     plt.title('Average Number of Steps per Algorithm')
     plt.legend()
     plt.show()
-
-
-
