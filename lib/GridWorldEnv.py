@@ -7,6 +7,7 @@ from scipy import stats
 import math
 from graph import GridGraphWithItems
 import sys
+import copy
 import matplotlib.pyplot as plt
 
 
@@ -147,6 +148,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
             y = self.n - 1 if y > self.n - 1 else (0 if y < 0 else y)
             item.setStateFromRowAndCol(np.rint(x), np.rint(y))
             self.item_locations[int(np.rint(x))][int(np.rint(y))].append(item)
+        self.original_locations = copy.deepcopy(self.item_locations)
 
     def _getRowColFromState(self, state):
         return (state % self. m), int(state / self.m)
@@ -363,6 +365,41 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         ax.set_title("Value Function Heat Map")
         fig.tight_layout()
         plt.show()
+
+    def heatMap_episode(self, episode_states):
+        map = np.zeros([self.m, self.n])
+        for i in range(self.m):
+            for j in range(self.n):
+                map[j][i] = round(self.V[i*self.m + j], 2)
+
+        plt.ion()
+        fig, ax = plt.subplots()
+        im = ax.imshow(map)
+        ax.set_title("Value Function Heat Map")
+        fig.tight_layout()
+
+        for x in range(len(episode_states)):
+
+            print(x)
+            for i in range(self.m):
+                for j in range(self.n):
+                    if episode_states[x] == i * self.m + j:
+                        if len(self.original_locations[j][i]) > 0:
+                            self.original_locations[j][i] = []
+                        text = ax.text(i, j, "X", ha="center", va="center", color="w")
+                    elif len(self.original_locations[j][i]) > 0:
+                        text = ax.text(i, j, "I", ha="center", va="center", color="w")
+                    else:
+                        text = ax.text(i, j, map[j, i], ha="center", va="center", color="w")
+
+            fig.canvas.draw()
+            fig.canvas.flush_events()
+            if x != len(episode_states) - 1:
+                for t in ax.texts:
+                    t.set_visible(False)
+
+        plt.pause(5)
+        plt.close(fig)
 
     @property
     def state(self):

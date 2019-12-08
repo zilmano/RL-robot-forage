@@ -41,6 +41,20 @@ def exec_policy_for_episode(env,pi,max_out_steps=math.inf):
         steps += 1
     return steps
 
+def exec_policy_for_episode_states(env,pi,max_out_steps=math.inf):
+    steps = 0
+    states = [0]
+    final = False
+    #print("start state:{}".format(env.state))
+    final = env.final
+    while not final and steps <= max_out_steps:
+        a = pi.action(env.state,greedy=False)
+        (s, r, final) = env.step(a)
+        states.append(env._grid_cell)
+        #print("a {} --> s {}".format(a,s))
+        steps += 1
+    return steps, states
+
 def testDynaQ(gridWorldModel):
     Q = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
     training_steps = 10000000
@@ -55,6 +69,9 @@ def testDynaQ(gridWorldModel):
     #visualizeGridValueFunc(gridWorldModel)
 
     #gridWorldModel.heatMap()
+    gridWorldModel.reset(0)
+    (steps,states) = exec_policy_for_episode_states(gridWorldModel, pi)
+    gridWorldModel.heatMap_episode(states)
 
     print(q)
     return pi
