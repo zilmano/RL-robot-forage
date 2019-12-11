@@ -305,6 +305,10 @@ class GridWorldApproxModel(Env):  # MDP introduced at Fig 5.4 in Sutton Book
         return self._getRowColFromState(self._grid_cell)
 
     @property
+    def state(self):
+        return self._grid_cell
+
+    @property
     def final(self):
         return self._final_state
 
