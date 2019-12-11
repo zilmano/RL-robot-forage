@@ -2,11 +2,12 @@
 
 
 The main executbale file is main.py.
+
 The dependecies needed to run this project are:
+numpy,tqdm,matplotlib,scipy,enum
 
 To run:
-
-*python main.py*
+**python main.py**
 
 - By default, it will run the dynaQ algorithm on a 8x8 grid, for ten experiments, and then it will print out the result plots to the screen,
   and save them to the files "results.png" and "learning_curve.png". Expected run time - about one hour
