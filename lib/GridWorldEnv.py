@@ -191,7 +191,7 @@ class GridWorld(Env):  # MDP introduced at Fig 5.4 in Sutton Book
                 trans_mat[state][Actions.south][state + 1] = 1
                 r_mat[state][Actions.south][state + 1] = -1
 
-        # reward_for_item = 1
+        # reward_for_item = 20
         reward_for_item = 1
         for item in self.items:
             if item.state < (self.n-1) * self.m:
