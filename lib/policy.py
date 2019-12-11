@@ -72,13 +72,17 @@ class NewPolicy(Policy):
     def nS(self, nS):
         self._nS = nS
 
+    def isApproxPi(self):
+        return False
+
+
 class ApproximatePolicy(Policy):
     '''
     Policy that has Q approximators fucntors for each action. And it decides
     e-greedly which action is the best based on the approximators and the provided
     features
     '''
-    def __init__(self,nA, approximators=None, eps=.1):
+    def __init__(self,nA, approximators=None, eps=.4):
         self._nA = nA
         # each approximators position in the list is the action's index. action 0 will be first, etc.
         self.approximators = approximators if approximators is not None else nA*[]
@@ -112,6 +116,10 @@ class ApproximatePolicy(Policy):
     @Q.setter
     def nA(self,nA):
         self._nA = nA
+
+    def isApproxPi(self):
+        return True
+
 
 
 class HandMadeSweepPolicy(Policy):
@@ -190,3 +198,7 @@ class HandMadeSweepPolicy(Policy):
     @nS.setter
     def nS(self, nS):
         self._nS = nS
+
+    def isApproxPi(self):
+        return False
+
