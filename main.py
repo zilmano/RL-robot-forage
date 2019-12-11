@@ -7,7 +7,6 @@ import utility as util
 import policy
 from GridWorldEnv import GridWorld, Item, Actions
 from GridWorldEnvApprox import GridWorldApproxModel
-from ExampleEnv import GridWorldPage60
 from dynaQApprox import approx_dyna_q
 from dynaQ import tabular_dyna_q
 import MonteCarloControl as mc
@@ -32,10 +31,9 @@ def testRandomPolicy(gridWorldModel):
 def exec_policy_for_episode(env,pi,max_out_steps=math.inf):
     steps = 0
     final = False
-    #print("start state:{}".format(env.state))
     final = env.final
     while not final and steps <= max_out_steps:
-        a = pi.action(env.state,greedy=False)
+        a = pi.action(env.state, greedy=False)
         (s, r, final) = env.step(a)
         #print("a {} --> s {}".format(a,s))
         steps += 1
@@ -55,23 +53,34 @@ def exec_policy_for_episode_states(env,pi,max_out_steps=math.inf):
         steps += 1
     return steps, states
 
-def testDynaQ(gridWorldModel):
+def exec_policy_for_episode_approx(env,pi,max_out_steps=math.inf):
+    steps = 0
+    final = False
+    final = env.final
+    while not final and steps <= max_out_steps:
+        if not pi.isApproxPi():
+            a = pi.action(env.state, greedy=False)
+        else:
+            features = env.features
+            a = pi.action(features, greedy=False)
+        _, _, _, final, _ = env.step(a)
+        steps += 1
+    print(steps)
+    return steps
+
+def testDynaQ(gridWorldModel,plot=False):
     Q = np.zeros((gridWorldModel.spec.nS,gridWorldModel.spec.nA))
     training_steps = 10000000
     model_training_steps = 50
     learning_rate = 0.1
 
-    q, pi, episode_steps = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps, num_of_episodes=1000, eps=0.3)
+    q, pi, episode_steps = tabular_dyna_q(gridWorldModel, Q, learning_rate, training_steps, model_training_steps,
+                                          num_of_episodes=1000, eps=0.3, plot=plot)
     gridWorldModel.setQ(q,pi)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
-    #visualizeGridValueFunc(gridWorldModel)
-
     #gridWorldModel.heatMap()
-    gridWorldModel.reset(0)
-    (steps,states) = exec_policy_for_episode_states(gridWorldModel, pi)
-    gridWorldModel.heatMap_episode(states)
+    #gridWorldModel.reset(0)
+    #(steps,states) = exec_policy_for_episode_states(gridWorldModel, pi)
+    #gridWorldModel.heatMap_episode(states)
 
     print(q)
     return pi
@@ -242,24 +251,65 @@ def parameterTest():
     plt.legend()
     plt.show()
 
+def runApproximation():
+    # Intitalize 4x4 gridworld with 2 items
+    n = 8
+    m = 8
+    k = 2
+
+    random_avgs = []
+    sweep_avgs = []
+    dyna_avgs = []
+
+    util.logmsg("")
+    util.logmsg("results for approximate",log_only=True)
+    util.logmsg("experiment, average sweep steps, average rl steps, average random policy steps",log_only=True)
+
+    # Run for 10 different distributions. Train RL, and then compare on 100 episodes each.
+    for i in range(0, 6):
+        gridWorldModel = GridWorldApproxModel(m, n, k, debug=False, gamma=1, no_stochastisity=False)
+        #visualizeGridProbabilities(gridWorldModel, k, aggregate=True)
+        eval_pi = testApproxDynaQ(gridWorldModel)
+        (rand_avg, sweep_avg, dyna_avg) = compareToBaseLineApprox(gridWorldModel, eval_pi, k)
+        random_avgs.append(rand_avg)
+        sweep_avgs.append(sweep_avg)
+        dyna_avgs.append(dyna_avg)
+    experiment_nums = ('1', '2', '3', '4', '5', '6')
+    y_pos = np.arange(len(experiment_nums))
+    bar_width = 0.2
+    rects1 = plt.bar(y_pos, random_avgs, bar_width,
+                     color='b',
+                     label='Random Policy')
+    rects2 = plt.bar(y_pos + bar_width, sweep_avgs, bar_width,
+                     color='g',
+                     label='Handcrafted sweep policy')
+    rects3 = plt.bar(y_pos + 2 * bar_width, dyna_avgs, bar_width,
+                     color='r',
+                     label='DynaQ')
+    plt.xticks(y_pos + bar_width, experiment_nums)
+    plt.ylabel('Average Number of Steps')
+    plt.xlabel('Experiment Number')
+    plt.title('Average Number of Steps per Algorithm')
+    plt.legend()
+    plt.savefig("results")
+    plt.show()
+
+
 def testApproxDynaQ(gridWorldModel):
-    # Run two episodes with a DynaQ policy
+    # Test approximate DynaQ ( it is not really DynaQ, just semi-gradient Sarsa.
     training_steps = 10000
     model_training_steps = None
     learning_rate = 0.0001
     pi = approx_dyna_q(gridWorldModel, learning_rate, training_steps, model_training_steps,
                             num_of_episodes=40000)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=1)
-    #visualizeGridPolicy(pi, gridWorldModel.m, gridWorldModel.n, item_status=2)
-    #visualizeGridValueFunc(gridWorldModel)
-    gridWorldModel.heatMap()
+    #gridWorldModel.heatMap()
     return pi
 
 def testMonteCarlo(gw):
     Q = np.zeros((gridWorldModel.spec.nS, gridWorldModel.spec.nA))
     randomPi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
     sim = util.Simulator(gw, randomPi)
+
     eps = 0.01
     training_episodes = 10000
 
@@ -280,22 +330,42 @@ def compareToBaseLine(gw, eval_pi, k, episodes_num=100):
     #print("nearest_neighbor_tour:" + str(base_line_tour))
 
     for i in range(0, episodes_num):
-        #print("inst world model...")
         gw.reset(start_cell=(m - 1))
         gw_twin = copy.deepcopy(gw)
         #visualizeGridValueFunc(gw)
-        #print("exec sweep policy for episode...")
         sweep_steps += exec_policy_for_episode(gw, sweep_pi)
         rl_steps += exec_policy_for_episode(gw_twin, eval_pi)
-        #print("rl steps" + str(rl_steps))
-        #print("sweep steps" + str(sweep_steps))
-        # nn_tour_expected_steps += gw.graph.calc_path_cost(base_line_tour)
+
     avg_nn_steps = nn_tour_expected_steps
     avg_sweep_steps = sweep_steps / episodes_num
     avg_rl_steps = rl_steps/episodes_num
 
     print("avg_sweep={} avg_rl={} avg_nearest_neigbor={}".format(avg_sweep_steps, avg_rl_steps,avg_nn_steps))
     return avg_nn_steps, avg_sweep_steps, avg_rl_steps
+
+def compareToBaseLineApprox(gw, eval_pi, k, episodes_num=100):
+    sweep_pi = policy.HandMadeSweepPolicy(4, m, n)
+    sweep_steps = 0
+    rl_steps = 0
+    random_pi = policy.NewPolicy(gw.spec.nA, gw.grid_size)
+    rand_pi_steps = 0
+
+    for i in range(0, episodes_num):
+        print("doing comparsion, episode {} out of {}...".format(i,episodes_num))
+        gw.reset(start_cell=(m - 1))
+        '''Re-use the same model to be the same for all evaluated policies. No stochastisity.'''
+        gw_twin = copy.deepcopy(gw)
+        gw_twin2 = copy.deepcopy(gw)
+        sweep_steps += exec_policy_for_episode_approx(gw, sweep_pi)
+        rl_steps += exec_policy_for_episode_approx(gw_twin, eval_pi)
+        rand_pi_steps += exec_policy_for_episode_approx(gw_twin2, random_pi)
+
+    avg_sweep_steps = sweep_steps / episodes_num
+    avg_rl_steps = rl_steps/episodes_num
+    avg_random_pi_steps = rand_pi_steps/episodes_num
+    print("avg_sweep={} avg_rl={} avg_random_pi_steps={}".format(avg_sweep_steps, avg_rl_steps, avg_random_pi_steps))
+    util.logmsg("{},{},{}",(avg_sweep_steps, avg_rl_steps, avg_random_pi_steps),log_only=True)
+    return avg_random_pi_steps, avg_sweep_steps, avg_rl_steps
 
 
 def visualizeGridPolicy(pi, m, n, item_status=0,policy_type=PolicyType.greedy,eps=0.1):
@@ -315,23 +385,19 @@ def visualizeGridProbabilities(gridWorldModel, k, aggregate=False):
 
 
 if __name__ == "__main__":
-    util.openlog('log.txt')
+    util.openlog('results.csv')
 
     # Intitalize 4x4 gridworld with 2 items
     n = 8
     m = 8
     k = 2
 
-    # gridWorldModel = GridWorldApproxModel(m, n, k, debug=False, gamma=1, no_stochastisity=False)
-    # eval_pi = testApproxDynaQ(gridWorldModel)
-    # eval_pi = policy.NewPolicy(gridWorldModel.spec.nA, gridWorldModel.spec.nS)
-    # compareToBaseLine(gridWorldModel, eval_pi, k)
-
     nn_avgs = []
     sweep_avgs = []
     dyna_avgs = []
 
     # Run for 10 different distributions. Train RL, and then compare on 100 episodes each.
+    plot_learning_curve = True
     for i in range(0,10):
         gridWorldModel = GridWorld(m,n,k,debug=False, gamma=1, no_stochastisity=False)
         #visualizeGridValueFunc(gridWorldModel)
@@ -339,14 +405,13 @@ if __name__ == "__main__":
 
         # Testing
         # testRandomPolicy(gridWorldModel)
-        eval_pi = testDynaQ(gridWorldModel)
+        eval_pi = testDynaQ(gridWorldModel,plot = plot_learning_curve)
         #parameterTest()
-        #test1(gridWorldModel)
-        #mc_pi = testMonteCarlo(gridWorldModel)
         (nn_avg, sweep_avg, dyna_avg) = compareToBaseLine(gridWorldModel,eval_pi, k)
         nn_avgs.append(nn_avg)
         sweep_avgs.append(sweep_avg)
         dyna_avgs.append(dyna_avg)
+        plot_learning_curve = False
 
     experiment_nums = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '10')
     y_pos = np.arange(len(experiment_nums))
@@ -372,4 +437,8 @@ if __name__ == "__main__":
     plt.xlabel('Experiment Number')
     plt.title('Average Number of Steps per Algorithm')
     plt.legend()
+    plt.savefig("results.png")
     plt.show()
+
+
+    #runApproximation()
