@@ -7,7 +7,7 @@ from policy import NewPolicy
 import random
 from tqdm import tqdm
 import utility as util
-from matplotlib.pyplot import *
+import matplotlib.pyplot as plt
 
 
 class Model:
@@ -79,22 +79,7 @@ def update_policy(q,s,pi):
     pi.update(s, action_prob/n)
 
 
-'''def update_policy(q, num_states, num_actions):
-    action_prob = np.zeros((num_states, num_actions))
-    for s in range(num_states):
-        max_q = np.amax(q[s])
-        max_not_set = True
-        for a in range(num_actions):
-            if q[s][a] == max_q and max_not_set:
-                action_prob[s][a] = 1
-                max_not_set = False
-            else:
-                action_prob[s][a] = 0
-    pi = EpsilonGreedyPolicy(num_actions, action_prob)
-    return pi'''
-
-
-def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None, eps=0.3):
+def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None, eps=0.3, plot=False):
     #References Sutton Book pg. 164
 
     q = init_q
@@ -112,9 +97,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
     avg_step_count = 0
     step_count = 0
     episode_count = 0
-    print("doing episode num 0")
-    #for i in tqdm(range(num_steps)):
-    for i in range(0,num_steps):
+    for i in tqdm(range(num_steps)):
+    #for i in range(0,num_steps):
         S = grid_world.state
         A = pi.action(S)
         previously_visited.append((S, A))
@@ -142,8 +126,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
             (test, final) = grid_world.reset(random_start_cell=True)
             if not final:
                 if episode_count % 100 == 0:
-                    print("   episode steps:" + str(step_count))
-                    print("doing episode num {}".format(episode_count))
+                    print("done episode num {} out of {}. episode steps: {} ".format(episode_count, num_of_episodes,
+                                                                                     step_count))
                 last_ep_step_count[episode_count%20] = step_count
                 episode_steps.append(step_count)
                 step_count = 0
@@ -151,12 +135,14 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
                 #print(test)
                 #util.visualizeGridTxt(grid_world, grid_world.V)
                 if episode_count == num_of_episodes:
-                    #eps = range(len(episode_steps))
-                    #plot(eps, episode_steps)
-                    #xlabel('Episodes')
-                    #ylabel('Steps')
-                    #title('Steps per Episode')
-                    #show()
+                    if plot:
+                        eps = range(len(episode_steps))
+                        plt.plot(eps, episode_steps)
+                        plt.xlabel('Episodes')
+                        plt.ylabel('Steps')
+                        plt.title('Steps per Episode')
+                        plt.savefig("learning_curve.png")
+                        plt.show()
                     return q, pi, episode_steps
 
     avg_step_count = last_ep_step_count.sum()/20
@@ -168,5 +154,4 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
     #xlabel('Episodes')
     #ylabel('Steps per Episode')
     #show()
-
     return q, pi, episode_steps
