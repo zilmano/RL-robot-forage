@@ -97,8 +97,8 @@ def tabular_dyna_q(grid_world, init_q, alpha, num_steps, n, num_of_episodes=None
     avg_step_count = 0
     step_count = 0
     episode_count = 0
-    for i in tqdm(range(num_steps)):
-    #for i in range(0,num_steps):
+    #for i in tqdm(range(num_steps)):
+    for i in range(0,num_steps):
         S = grid_world.state
         A = pi.action(S)
         previously_visited.append((S, A))
