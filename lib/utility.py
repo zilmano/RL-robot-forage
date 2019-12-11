@@ -98,10 +98,11 @@ def openlog(logfile=None):
         sys.exit("ERROR: Could not open log file {}. Quitting. Err message: {}".format(logfile,e))
 
 
-def logmsg(msg,vars=None,tab=0):
+def logmsg(msg,vars=None,tab=0,log_only=False):
     if vars is not None:
         msg = tab * "    " + msg.format(*vars)
-    print(msg)
+    if not log_only:
+        print(msg)
     global log_fh
     try:
         log_fh.write(msg + "\n")
