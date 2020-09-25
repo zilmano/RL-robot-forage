@@ -1,10 +1,12 @@
-# RL-stochastic-search
+# Reinforcement Learning For Continuous Search Tasks With Unknown Priors
 
+Please see the project description in the following paper:
+https://drive.google.com/file/d/1DIYh0xE6ExES_ugUo415CrLveOcnwkmn/view?usp=sharing
 
 The main executbale file is main.py.
 
-The dependecies needed to run this project are:
-numpy,tqdm,matplotlib,scipy,enum
+The pythondependecies needed to run this project are:
+numpy, tqdm, matplotlib, scipy, enum
 
 To run:
 
